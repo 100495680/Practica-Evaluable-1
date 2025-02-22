@@ -27,17 +27,31 @@ struct Respuesta {
     struct Coord value3;
 };
 
-
-int main() {
-    key_t clave = ftok("cola.msg", 65);  // Generar clave única
-    int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
+struct Peticion leerMensajesCliente()  {
+    key_t clave = ftok("cola.msg", 22);
+    int msgid = msgget(clave, 0666);  // Obtener ID de la cola
 
     struct Peticion msg;
-    msg.numero_serie = 1;  // Tipo de mensaje
-    strcpy(msg.value1, "Hola, este es un mensaje!");
+    msgrcv(msgid, &msg, sizeof(msg) - sizeof(long), 1, 0);  // Recibir mensaje tipo 1
+
+    printf("Mensaje en Proxy recibido: %s\n", msg.value1);
+
+    return msg;
+}
+
+int mandarMensajesServidor(struct Peticion msg)    {
+    key_t clave = ftok("cola.msg", 22);  // Generar clave única para la cola de mensajes el número 22 es arbitrario
+    int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
 
     msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
-    printf("Mensaje enviado: %s\n", msg.value1);
+    printf("Mensaje en Proxy enviado: %s\n", msg.value1);
 
     return 0;
+}
+
+int main() {
+    struct Peticion msg;
+    msg = leerMensajesCliente();
+    mandarMensajesServidor(msg);
+    
 }

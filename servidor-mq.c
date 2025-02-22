@@ -28,7 +28,7 @@ struct Respuesta {
 
 
 int main() {
-    key_t clave = ftok("cola.msg", 65);
+    key_t clave = ftok("cola.msg", 22);
     int msgid = msgget(clave, 0666);  // Obtener ID de la cola
 
     struct Peticion msg;
