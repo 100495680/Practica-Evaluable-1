@@ -3,3 +3,4 @@
 [] Cambiar la aparencia del Cliente - Proxy para que parezca API
 [] Implementar las respuestas
 [] Lógica del servidor
+[] Meter traqueo de mensajes con PID 
