@@ -8,8 +8,22 @@
 #include <sys/msg.h>
 #include <string.h>
 
+// Como en una red de ordenadores (lo que tratamos de emular) al principio de la ejecución se manda un discover
+// De forma que se conozca la ip de los nuevos elementos. Uso el nombre de Proxy por simplicidad aun que no es correcto
+// en esta aproximación.
+int mandarDiscover()    {
+    key_t clave = ftok("cola.msg", 22);  // Generar clave única para la cola de mensajes el número 22 es arbitrario
+    int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
+    long msg = getpid();
+    msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
+    printf("Proxy discover enviado: ");
+
+    return 0;
+}
+
 struct Peticion {
-    long numero_serie;  // Tipo de mensaje
+    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
+    long proxy_add;
     char * operation;  // Código de operación POSIX
     int key;
     char value1[256];
@@ -19,7 +33,8 @@ struct Peticion {
 };
 
 struct Respuesta {
-    long numero_serie;
+    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
+    long proxy_add;
     int status;  // 0 para éxito, -1 para error lógico, -2 para error de comunicación
 };
 
@@ -49,7 +64,6 @@ int mandarMensajeServidor( struct Peticion msg) {
     int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
 
     msg.numero_serie = 1;  // Tipo de mensaje
-    strcpy(msg.value1, "Mensaje del cliente");
 
     msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
     printf("Mensaje enviado: %s\n", msg.value1);

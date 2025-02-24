@@ -4,3 +4,4 @@
 [] Implementar las respuestas
 [] Lógica del servidor
 [] Meter traqueo de mensajes con PID 
+[] Eliminar una ip cuando se desconecte

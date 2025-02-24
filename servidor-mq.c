@@ -9,8 +9,24 @@ los comandos POSIX (set_value, get_value, modify_value, delete_key, exist, destr
 #include <sys/msg.h>
 #include <string.h>
 
+// Como en una red de ordenadores (lo que tratamos de emular) al principio de la ejecución se manda un discover
+// De forma que se conozca la ip de los nuevos elementos. Uso el nombre de Proxy por simplicidad aun que no es correcto
+// en esta aproximación.
+int recibirDiscover() {
+    key_t clave = ftok("cola.msg", 22);
+    int msgid = msgget(clave, 0666);  // Obtener ID de la cola
+
+    long proxy_add;
+    msgrcv(msgid, &proxy_add, sizeof(proxy_add) - sizeof(long), 1, 0);  // Recibir mensaje tipo 1
+
+    printf("Proxy Add del Cliente Recibida: %d\n", proxy_add);
+    return proxy_add;
+}
+
+
 struct Peticion {
-    long numero_serie;  // Tipo de mensaje
+    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
+    long proxy_add;
     char* operation;  // Código de operación POSIX
     int key;
     char value1[256];
@@ -29,7 +45,8 @@ struct paquete
 };
 
 struct Respuesta {
-    long numero_serie;
+    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
+    long proxy_add;
     int status;  // 0 para éxito, -1 para error lógico, -2 para error de comunicación
 };
 
@@ -54,12 +71,13 @@ struct Peticion leerMensajesCliente() {
     return msg;
 }
 
-int mandarRespuestaCliente(int status, long numero_serie) {
+int mandarRespuestaCliente(int status, long ip_add, long proxy_add) {
     key_t clave = ftok("cola.msg", 22);  // Generar clave única para la cola de mensajes el número 22 es arbitrario
     int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
 
     struct Respuesta msg;
-    msg.numero_serie = numero_serie;
+    msg.ip_add = ip_add;
+    msg.proxy_add = proxy_add;
     msg.status = status;
 
     msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
@@ -71,39 +89,43 @@ int mandarRespuestaCliente(int status, long numero_serie) {
 
 
 int main() {
+
+    //Primero necesito recibir la conexión del proxy
+    long proxy_ip = recibirDiscover();
+
     struct Peticion msg;
     struct paquete elemento;
 
     msg = leerMensajesCliente();
     elemento = sacarPaquete(msg);
     
-    if (1 == 2) {
-        mandarRespuestaCliente(-2,msg.numero_serie);
+    if (proxy_ip != msg.proxy_add) {
+        mandarRespuestaCliente(-2, msg.ip_add, msg.proxy_add);
     }
 
     if (strcmp(msg.operation, "set_value") == 0)
     { 
         
-        mandarRespuestaCliente( 0, msg.numero_serie );}
+        mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add );}
     if (strcmp(msg.operation, "get_value") == 0)
     { 
         
-        mandarRespuestaCliente( 0, msg.numero_serie );}
+        mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add );}
     if (strcmp(msg.operation, "modify_value") == 0)
     { 
         
-        mandarRespuestaCliente( 0, msg.numero_serie );}
+        mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add );}
     if (strcmp(msg.operation, "delete_key") == 0)
     { 
         
-        mandarRespuestaCliente( 0, msg.numero_serie );}
+        mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add );}
     if (strcmp(msg.operation, "exist") == 0)
     { 
         
-        mandarRespuestaCliente( 0, msg.numero_serie );}
+        mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add );}
     if (strcmp(msg.operation, "destroy") == 0)
     { 
         destroy();
         printf("Value1 %s", msg.value1);
-        mandarRespuestaCliente( 0, msg.numero_serie );}
+        mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add );}
 }

@@ -8,8 +8,33 @@ que manda al servidor para que ejecute los comandos POSIX (set_value, get_value,
 #include <sys/msg.h>
 #include <string.h>
 
+// Como en una red de ordenadores (lo que tratamos de emular) al principio de la ejecución se manda un discover
+// De forma que se conozca la ip de los nuevos elementos. Uso el nombre de Proxy por simplicidad aun que no es correcto
+// en esta aproximación.
+long mandarDiscover()    {
+    key_t clave = ftok("cola.msg", 22);  // Generar clave única para la cola de mensajes el número 22 es arbitrario
+    int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
+    long msg = getpid();
+    msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
+    printf("Proxy discover enviado: ");
+
+    return msg;
+}
+
+long recibirDiscover() {
+    key_t clave = ftok("cola.msg", 22);
+    int msgid = msgget(clave, 0666);  // Obtener ID de la cola
+
+    long proxy_add;
+    msgrcv(msgid, &proxy_add, sizeof(proxy_add) - sizeof(long), 1, 0);  // Recibir mensaje tipo 1
+
+    printf("proxy Add del Cliente Recibida: %d\n", proxy_add);
+    return proxy_add;
+}
+
 struct Peticion {
-    long numero_serie;  // Tipo de mensaje
+    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
+    long proxy_add;
     char* operation;  // Código de operación POSIX
     int key;
     char value1[256];
@@ -19,7 +44,8 @@ struct Peticion {
 };
 
 struct Respuesta {
-    long numero_serie;
+    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
+    long proxy_add;
     int status;  // 0 para éxito, -1 para error lógico, -2 para error de comunicación
 };
 
@@ -28,7 +54,7 @@ struct Peticion leerMensajesCliente()  {
     int msgid = msgget(clave, 0666);  // Obtener ID de la cola
 
     struct Peticion msg;
-    msgrcv(msgid, &msg, sizeof(msg) - sizeof(long), 1, 0);  // Recibir mensaje tipo 1
+    msgrcv(msgid, &msg, sizeof(msg) - sizeof(long), , 0);  // Recibir mensaje tipo 1
 
     printf("Mensaje en Proxy recibido: %s\n", msg.value1);
 
@@ -71,12 +97,37 @@ int mandarRespuestaCliente(struct Respuesta msg)    {
 
 
 int main() {
-    struct Peticion msg;
-    msg = leerMensajesCliente();
-    mandarMensajesServidor(msg);
 
-    struct Respuesta rp;
-    rp = leerRespuestaServidor();
-    mandarRespuestaCliente(rp);
-    
+    // Identificación al servidor y guardar mi ip
+    long mi_ip = mandarDiscover();
+
+    // Crear el directorio de ips conectadas
+    int *lista;
+    int size = 1;
+
+    lista = (int*)malloc(size * sizeof(int));
+
+    // La lógica del servidor estará en un loop infinito
+    //while (true)
+    //{
+        // Actualizacion del directorio de ips lista dinamica
+        long client_ip = recibirDiscover();
+        //if (condicion activada cuando un nuevo proceso se conecte)
+        /*
+        lista[0] = client_ip;
+        int size ++;
+
+        lista = (int*)realloc(lista, size * sizeof(int));
+        */
+
+
+        struct Peticion msg;
+        msg = leerMensajesCliente();
+        mandarMensajesServidor(msg);
+        
+        struct Respuesta rp;
+        rp = leerRespuestaServidor();
+        mandarRespuestaCliente(rp);
+        
+    //}
 }
