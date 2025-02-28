@@ -1,0 +1,6 @@
+El cliente que no pida nada por consola, las especificiaciones de un cliente las programaos directamente.
+La libería no tiene por qué soportar múltiples threads, luego no hacemos clientes multi-threads.
+El lado del cliente no es concurrente.
+Para probar la concurrencia creamos varios clientes y los lanzamos de forma paralela.
+Probar que lanzando 10000 tuplas no se quede pillado.
+Que la aplicación no pida nada por consola, que no haya scanf.
