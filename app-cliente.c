@@ -3,23 +3,15 @@
 
 #include "claves.h"
 
+// Ld_library path
+#include <stdlib.h>
 #include <stdio.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
+#include <mqueue.h>
 #include <string.h>
 
 // Como en una red de ordenadores (lo que tratamos de emular) al principio de la ejecución se manda un discover
 // De forma que se conozca la ip de los nuevos elementos. Uso el nombre de Proxy por simplicidad aun que no es correcto
 // en esta aproximación.
-int mandarDiscover()    {
-    key_t clave = ftok("cola.msg", 22);  // Generar clave única para la cola de mensajes el número 22 es arbitrario
-    int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
-    long msg = getpid();
-    msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
-    printf("Proxy discover enviado: ");
-
-    return 0;
-}
 
 struct Peticion {
     long ip_add; // Vamos a imitar la comunicacion de un sevidor real
@@ -47,33 +39,27 @@ struct tupla
     struct Coord value3;
 };
 
-struct Respuesta leerRespuestaServidor(){
-    key_t clave = ftok("cola.msg", 22);
-    int msgid = msgget(clave, 0666);  // Obtener ID de la cola
-
+struct Respuesta leerRespuestaServidor(mqd_t mq){
+    
     struct Respuesta msg;
-    msgrcv(msgid, &msg, sizeof(msg) - sizeof(long), 1, 0);  // Recibir mensaje tipo 1
+    mq_receive(mq, (char *)&msg, sizeof(msg), 0);
+    
 
     printf("Respuesta en Cliente recibido\n");
 
     return msg;
 }
 
-int mandarMensajeServidor( struct Peticion msg) {
-    key_t clave = ftok("cola.msg", 22);  // Generar clave única
-    int msgid = msgget(clave, 0666 | IPC_CREAT);  // Crear o conectar cola
+int mandarMensajeServidor( struct Peticion msg, mqd_t mq) {
+    if (mq_send(mq, (char *)&msg, sizeof(msg),0) == -1)
+    { perror("Client MQ send error"); exit(1);}
 
-    msg.numero_serie = 1;  // Tipo de mensaje
-
-    msgsnd(msgid, &msg, sizeof(msg) - sizeof(long), 0);  // Enviar mensaje
     printf("Mensaje enviado: %s\n", msg.value1);
-
     return 0;
 }
 
 struct Peticion encapsulador ( struct tupla tpl, char* operation) {
     struct Peticion msg;
-    msg.numero_serie = 0;
     strcpy(msg.operation, operation);
     msg.key = tpl.key;
     strcpy(msg.value1, tpl.value1);
@@ -86,6 +72,12 @@ struct Peticion encapsulador ( struct tupla tpl, char* operation) {
 
 
 int main() {
+    
+    mqd_t mq = mq_open("/colaClientes", O_CREAT | O_RDWR, 0666, NULL);
+    if (mq == -1){
+        perror("Error en la creacion de la cola\n");
+        exit(1);
+    }
     struct tupla tpl;
     char* operacion;
 
@@ -100,5 +92,5 @@ int main() {
     tpl.value3.x = 2;
     tpl.value3.y = 4;
 
-    mandarMensajeServidor( encapsulador (tpl, operacion));
+    mandarMensajeServidor( encapsulador (tpl, operacion), mq);
 }
