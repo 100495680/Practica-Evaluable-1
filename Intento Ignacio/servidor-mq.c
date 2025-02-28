@@ -14,16 +14,7 @@ los comandos POSIX (set_value, get_value, modify_value, delete_key, exist, destr
 // en esta aproximación.
 
 
-struct Peticion {
-    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
-    long proxy_add;
-    char* operation;  // Código de operación POSIX
-    int key;
-    char value1[256];
-    int N_value2;
-    double V_value2[32];
-    struct Coord value3;
-};
+
 
 struct paquete
 {
@@ -32,12 +23,6 @@ struct paquete
     int N_value2;
     double V_value2[32];
     struct Coord value3;
-};
-
-struct Respuesta {
-    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
-    long proxy_add;
-    int status;  // 0 para éxito, -1 para error lógico, -2 para error de comunicación
 };
 
 struct paquete sacarPaquete(struct Peticion msg) {
