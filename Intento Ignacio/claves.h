@@ -1,10 +1,15 @@
 #ifndef CLAVES_H
 #define CLAVES_H
 
+struct Coord {
+   int x ;
+   int y ;
+} ;
+
 struct Peticion {
    long ip_add; // Vamos a imitar la comunicacion de un sevidor real
    long proxy_add;
-   char* operation;  // Código de operación POSIX
+   char operation[10];  // Código de operación POSIX
    int key;
    char value1[256];
    int N_value2;
@@ -19,10 +24,6 @@ struct Respuesta {
 };
 
 
-struct Coord {
-   int x ;
-   int y ;
-} ;
 
 
 /**

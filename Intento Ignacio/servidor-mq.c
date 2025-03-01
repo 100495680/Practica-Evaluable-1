@@ -63,7 +63,7 @@ int mandarRespuestaCliente(int status, long ip_add, long proxy_add, mqd_t mq) {
 
 int main() {
 
-    mqd_t mq = mq_open("/colaServidor", O_CREAT | O_RDWR, 0666, NULL);
+    mqd_t mq = mq_open("/colaEnvios",  O_RDWR, 0666, NULL);
 
     struct Peticion msg;
     struct paquete elemento;
@@ -77,7 +77,6 @@ int main() {
 
     if (strcmp(msg.operation, "set_value") == 0)
     { 
-        
         mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add, mq );}
     if (strcmp(msg.operation, "get_value") == 0)
     { 
@@ -97,7 +96,8 @@ int main() {
         mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add, mq );}
     if (strcmp(msg.operation, "destroy") == 0)
     { 
-        destroy();
         printf("Value1 %s", msg.value1);
         mandarRespuestaCliente( 0, msg.ip_add, msg.proxy_add, mq);}
+
+    mq_unlink("/colaEnvios");
 }

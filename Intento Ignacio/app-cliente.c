@@ -3,7 +3,6 @@
 
 #include "claves.h"
 
-// Ld_library path
 #include <stdlib.h>
 #include <stdio.h>
 #include <mqueue.h>
@@ -15,48 +14,26 @@
 // en esta aproximación.
 
 
-struct tupla
-{
-    int key;
-    char value1[256];
-    int N_value2;
-    double V_value2[32];
-    struct Coord value3;
-};
-
-struct Peticion encapsulador ( struct tupla tpl, char* operation) {
-    struct Peticion msg;
-    strcpy(msg.operation, operation);
-    msg.key = tpl.key;
-    strcpy(msg.value1, tpl.value1);
-    msg.N_value2 = tpl.N_value2;
-    memcpy(msg.V_value2, tpl.V_value2, sizeof(tpl.V_value2)); 
-    msg.value3 = tpl.value3;
-    return msg;
-}
-
 
 
 int main() {
-    
-    mqd_t mq = mq_open("/colaEnvios", O_CREAT | O_RDWR, 0666, NULL);
-    if (mq == -1){
+    int key = 1;
+    char value1[256] = "example_value";
+    int N_value2 = 3;
+    double V_value2[32] = {1.1, 2.2, 3.3};
+    struct Coord value3 = {10, 20};
+
+    int response = set_value(key, value1, N_value2, V_value2, value3);
+
+    if (response == -1) {
         perror("Error en la creacion de la cola\n");
         exit(1);
+    } else {if (response == -2) {
+        perror("Error en el servidor\n");
+        exit(1);
+    } else {
+        printf("Correcto envio del mensaje\n");
     }
-    struct tupla tpl;
-    char* operacion;
-
-    strcpy(operacion, "destroy");
-
-
-    tpl.key = 0;
-    strcpy(tpl.value1, "Tupla");
-    tpl.N_value2 = 2;
-    tpl.V_value2[0] = 2.0;
-    tpl.V_value2[1] = 3.0;
-    tpl.value3.x = 2;
-    tpl.value3.y = 4;
-
-    mandarMensajeServidor( encapsulador (tpl, operacion), mq);
+    }
+    return 0;
 }

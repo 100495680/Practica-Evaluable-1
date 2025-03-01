@@ -14,12 +14,7 @@ struct LinkedList {
     struct LinkedList* next;
 };
 
-int destroy(void)
-{
-    printf("Destroy Ejecutado");
-    return 0;
-};
-
+int destroy(void);
 /**
  * @brief Este servicio inserta el elemento <key, value1, value2, value3>. 
  * El vector correspondiente al valor 2 vendrá dado por la dimensión del vector (N_Value2) y 

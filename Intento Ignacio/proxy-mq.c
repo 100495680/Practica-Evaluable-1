@@ -12,19 +12,27 @@ que manda al servidor para que ejecute los comandos POSIX (set_value, get_value,
 // De forma que se conozca la ip de los nuevos elementos. Uso el nombre de Proxy por simplicidad aun que no es correcto
 // en esta aproximación.
 
+struct tupla
+{
+    int key;
+    char value1[256];
+    int N_value2;
+    double V_value2[32];
+    struct Coord value3;
+};
 
-struct Peticion leerMensajesCliente(mqd_t mq)  {
-    
+struct Peticion encapsulador ( struct tupla tpl, char* operation) {
     struct Peticion msg;
-    mq_receive(mq, (char *)&msg, sizeof(msg), 0);
-    
-    printf("Mensaje en Proxy recibido: %s\n", msg.value1);
-
-
+    strcpy(msg.operation, operation);
+    msg.key = tpl.key;
+    strcpy(msg.value1, tpl.value1);
+    msg.N_value2 = tpl.N_value2;
+    memcpy(msg.V_value2, tpl.V_value2, sizeof(double) * tpl.N_value2); // Correct size for memcpy 
+    msg.value3 = tpl.value3;
     return msg;
 }
 
-int mandarMensajesServidor(struct Peticion msg, mqd_t mq)    {
+int mandarMensaje(struct Peticion msg, mqd_t mq)    {
     
     if (mq_send(mq, (char *)&msg, sizeof(msg),0) == -1)
     { perror("Client MQ send error"); exit(1);}
@@ -33,52 +41,45 @@ int mandarMensajesServidor(struct Peticion msg, mqd_t mq)    {
     return 0;
 }
 
-struct Respuesta leerRespuestaServidor(mqd_t mq)  {
+struct Peticion leerMensajesCliente(mqd_t mq, struct Peticion msg) {
     
-    struct Respuesta msg;
+    
     mq_receive(mq, (char *)&msg, sizeof(msg), 0);
     
-    printf("Respuesta en Proxy recibido\n");
+    printf("Mensaje en Proxy recibido: %s\n", msg.value1);
+
 
     return msg;
 }
 
-int mandarRespuestaCliente(struct Respuesta msg, mqd_t mq)    {
+int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3)
+{
+    mqd_t mq = mq_open("/colaEnvios", O_CREAT | O_RDWR, 0666, NULL);
+    if (mq == -1)
+    {
+        perror("Error en la creacion de la cola\n");
+        exit(1);
+    }
+    struct tupla tpl;
+    char operacion[10]; // Allocate enough space for the operation string
 
-    if (mq_send(mq, (char *)&msg, sizeof(msg),0) == -1)
-    { perror("Client MQ send error"); exit(1);}
+    strcpy(operacion, "set_value");
 
-    printf("Respuesta en Proxy enviado \n");
+    tpl.key = key;
+    strcpy(tpl.value1, value1);
+    tpl.N_value2 = N_value2;
+    memcpy(tpl.V_value2, V_value2, sizeof(double) * N_value2); // Correct size for memcpy
+    tpl.value3 = value3;
 
-    return 0;
+    mandarMensaje(encapsulador(tpl, operacion), mq);
+
+    struct Peticion msg;
+    msg = leerMensajesCliente(mq, msg);
+
+    mq_close(mq);
+
+    return 0; // Ensure the function returns an int
 }
 
 
 
-int main() {
-
-    mqd_t mq_cliente = mq_open("/colaCliente", O_CREAT | O_RDWR, 0666, NULL);
-    mqd_t mq_servidor = mq_open("/colaServidor", O_CREAT | O_RDWR, 0666, NULL);
-
-    // La lógica del servidor estará en un loop infinito
-    //while (true)
-    //{
-        //if (condicion activada cuando un nuevo proceso se conecte)
-        /*
-        lista[0] = client_ip;
-        int size ++;
-
-        lista = (int*)realloc(lista, size * sizeof(int));
-        */
-
-
-        struct Peticion msg;
-        msg = leerMensajesCliente(mq_cliente);
-        mandarMensajesServidor(msg, mq_servidor);
-        
-        struct Respuesta rp;
-        rp = leerRespuestaServidor(mq_servidor);
-        mandarRespuestaCliente(rp, mq_cliente);
-        
-    //}
-}
