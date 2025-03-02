@@ -4,8 +4,8 @@
 #include <string.h>
 
 int send_recv(struct peticion *p, struct respuesta *r) {
-    char qr_name[1024];
-    unsigned int prio = 0;
+    char qr_name[1024]; //nombre de cola privada del cliente
+    unsigned int prio = 0; //prioridad del mensaje
 
     struct mq_attr attr;
     attr.mq_flags = 0;
@@ -13,15 +13,15 @@ int send_recv(struct peticion *p, struct respuesta *r) {
     attr.mq_msgsize = sizeof(struct respuesta);
     attr.mq_curmsgs = 0;
 
-    sprintf(qr_name, "%s%d", "/CLIENTE_", getpid());
+    sprintf(qr_name, "%s%d", "/CLIENTE_", getpid()); //genera un nombre para cada cola de cliente con pid
 
-    int qs = mq_open(SERVER_QUEUE, O_WRONLY);
+    int qs = mq_open(SERVER_QUEUE, O_WRONLY); //crea cola del servidor
     if (qs == -1) {
         perror("Error al abrir la cola del servidor desde el cliente");
         return -2;
     }
 
-    int qr = mq_open(qr_name, O_CREAT | O_RDONLY, 0700, &attr);
+    int qr = mq_open(qr_name, O_CREAT | O_RDONLY, 0700, &attr); //crea cola privada para las respuestas
     if (qr == -1) {
         perror("Error al crear la cola de respuesta del cliente");
         mq_close(qs);
@@ -30,7 +30,8 @@ int send_recv(struct peticion *p, struct respuesta *r) {
 
     strcpy(p->q_name, qr_name);
 
-    if (mq_send(qs, (char *)p, sizeof(struct peticion), 0) == -1) {
+    int snd = mq_send(qs, (char *)p, sizeof(struct peticion), 0);
+    if (snd == -1) {
         perror("Error al enviar la petición al servidor");
         mq_close(qs);
         mq_close(qr);
@@ -40,7 +41,8 @@ int send_recv(struct peticion *p, struct respuesta *r) {
 
     printf("Esperando respuesta del servidor, tamaño esperado: %lu bytes\n", sizeof(struct respuesta));
 
-    if (mq_receive(qr, (char *)r, sizeof(struct respuesta), &prio) == -1) {
+    int rcv = mq_receive(qr, (char *)r, sizeof(struct respuesta), &prio);
+    if (rcv == -1) {
         perror("Error al recibir la respuesta del servidor");
         mq_close(qs);
         mq_close(qr);
@@ -50,9 +52,9 @@ int send_recv(struct peticion *p, struct respuesta *r) {
 
     printf("Respuesta recibida con status: %d\n", r->status);
 
-    mq_close(qs);
+    mq_close(qs); //cierra colas
     mq_close(qr);
-    mq_unlink(qr_name);
+    mq_unlink(qr_name); //elimina link cola
 
     return r->status;
 }
@@ -66,7 +68,7 @@ int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coo
 
     struct respuesta r;
 
-    int status = send_recv(&p, &r);
+    int status = send_recv(&p, &r); //llama a la función anterior que gestiona el envío del mensaje y la answer
     if (status == 0) {
         strncpy(value1, r.value1, MAX_STRING);
         *N_value2 = r.N_value2;
