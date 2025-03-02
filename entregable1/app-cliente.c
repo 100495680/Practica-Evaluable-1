@@ -2,29 +2,29 @@
 #include "claves.h"
 
 int main() {
-    int key1 = 1, key2 = 2;
-    char value1_1[] = "Hola";
-    char value1_2[] = "Mundo";
+    int key = 10;
+    char v1[MAX_STRING] = "Ejemplo";
+    double v2[MAX_VECTOR] = {1.1, 2.2, 3.3};
+    struct Coord v3 = {5, 6};
 
-    double value2_1[] = {3.14, 2.71};
-    double value2_2[] = {1.41, 1.73};
+    printf("Insertando clave...\n");
+    if (set_value(key, v1, 3, v2, v3) == 0) {
+        printf("Clave insertada correctamente\n");
+    } else {
+        printf("Error al insertar clave\n");
+    }
 
-    struct Coord value3_1 = {7, 8};
-    struct Coord value3_2 = {10, 20};
+    char retrieved_v1[MAX_STRING];
+    int N_value2;
+    double retrieved_v2[MAX_VECTOR];
+    struct Coord retrieved_v3;
 
-    printf("🔹 Insertando tupla 1...\n");
-    int result1 = set_value(key1, value1_1, 2, value2_1, value3_1);
-    if (result1 == 0)
-        printf("✅ Tupla 1 insertada correctamente.\n");
-    else
-        printf("❌ Error al insertar Tupla 1. Código de error: %d\n", result1);
-
-    printf("🔹 Insertando tupla 2...\n");
-    int result2 = set_value(key2, value1_2, 2, value2_2, value3_2);
-    if (result2 == 0)
-        printf("✅ Tupla 2 insertada correctamente.\n");
-    else
-        printf("❌ Error al insertar Tupla 2. Código de error: %d\n", result2);
+    printf("Obteniendo clave...\n");
+    if (get_value(key, retrieved_v1, &N_value2, retrieved_v2, &retrieved_v3) == 0) {
+        printf("Clave obtenida correctamente: %s\n", retrieved_v1);
+    } else {
+        printf("Error al obtener clave\n");
+    }
 
     return 0;
 }
