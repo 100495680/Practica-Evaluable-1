@@ -49,13 +49,13 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     new_tupla->value3 = value3;
     new_tupla->next = NULL; 
 
-    // Poner la nueva tupla en el final de la cola si hay cola
-    if (!previous) 
+    // Poner la nueva tupla en el final de la cola si hay cola y sino será la primera
+    if (previous) 
         previous->next = new_tupla;
-
-    // Comprobamos si es la primera tupla
-    if (head->key == NULL)
+    else
         head = new_tupla;
+    
+    
 
     pthread_mutex_unlock(&tupla_mutex);
     return 0;
@@ -108,10 +108,10 @@ int delete_key(int key) {
     Tupla *previous = NULL;
     while (current) {
         if (current->key == key) { // Mirar si la clave esta en el programa
-            if (!previous) 
+            if (previous) 
                 previous->next = current->next;
-
             free(current);
+            pthread_mutex_unlock(&tupla_mutex);
             return 0;
         }
         previous = current;
@@ -127,6 +127,7 @@ int exist(int key) {
     Tupla *current = head;
     while (current) {
         if (current->key == key) { // Mirar si la clave esta en el programa
+            pthread_mutex_unlock(&tupla_mutex);
             return 1;
         }
         current = current->next; // Convertir en NULL si no hay siguiente o iterar

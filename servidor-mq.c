@@ -25,6 +25,18 @@ void tratar_peticion(struct peticion *p) {
             printf("Ejecutando get_value() para key=%d\n", p->key);
             r.status = get_value(p->key, r.value1, &r.N_value2, r.V_value2, &r.value3);
             break;
+        case 3:
+            printf("Ejecutando modify_value() para key=%d\n", p->key);
+            r.status = modify_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
+            break;
+        case 4:
+            printf("Ejecutando delete() para key=%d\n", p->key);
+            r.status = delete_key(p->key);
+            break;
+        case 5:
+            printf("Ejecutando exist() para key=%d\n", p->key);
+            r.status = exist(p->key);
+            break;
         default:
             printf("Operación no reconocida: %d\n", p->op);
             r.status = -1;

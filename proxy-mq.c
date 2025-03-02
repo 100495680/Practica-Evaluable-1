@@ -98,3 +98,51 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
 
     return send_recv(&p, &r);
 }
+
+int modify_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
+    if (N_value2 < 1 || N_value2 > MAX_VECTOR) {
+        return -1;  // Error si el vector está fuera de rango
+    }
+
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 3;  // Código de operación para modify_value
+    p.key = key;
+    strncpy(p.value1, value1, MAX_STRING - 1);
+    p.value1[MAX_STRING - 1] = '\0';  // Asegurar terminación nula
+    p.N_value2 = N_value2;
+    memcpy(p.V_value2, V_value2, N_value2 * sizeof(double));
+    p.value3 = value3;
+
+    struct respuesta r;
+
+    return send_recv(&p, &r);
+}
+
+int destroy() {
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 0;  // Código de operación para destroy
+    
+    struct respuesta r;
+
+    return send_recv(&p, &r);
+}
+
+int exist(int key) {
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 5;  // Código de operación para destroy
+    p.key = key;
+
+    struct respuesta r;
+
+    return send_recv(&p, &r);
+}
+
+int delete_key(int key) {
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 4;  // Código de operación para destroy
+    p.key = key;
+
+    struct respuesta r;
+
+    return send_recv(&p, &r);
+}
