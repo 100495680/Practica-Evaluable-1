@@ -29,16 +29,10 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     if (N_value2 < 1 || N_value2 > MAX_VECTOR) return -1;
     pthread_mutex_lock(&tupla_mutex);
     Tupla *current = head;
-    while (current) {
-        if (current->key == key) {
-            strncpy(current->value1, value1, MAX_STRING - 1);
-            current->N_value2 = N_value2;
-            memcpy(current->V_value2, V_value2, N_value2 * sizeof(double));
-            current->value3 = value3;
-            pthread_mutex_unlock(&tupla_mutex);
-            return 0;
-        }
-        current = current->next;
+    Tupla *previous = NULL;
+    while (current) { // Iterar hasta la última tupla
+        previous = current;
+        current = current->next;         
     }
 
     Tupla *new_tupla = (Tupla *) malloc(sizeof(Tupla));
@@ -46,14 +40,22 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
         pthread_mutex_unlock(&tupla_mutex);
         return -1;
     }
-
+  
+    // Crear la nueva tupla
     new_tupla->key = key;
     strncpy(new_tupla->value1, value1, MAX_STRING - 1);
     new_tupla->N_value2 = N_value2;
     memcpy(new_tupla->V_value2, V_value2, N_value2 * sizeof(double));
     new_tupla->value3 = value3;
-    new_tupla->next = head;
-    head = new_tupla;
+    new_tupla->next = NULL; 
+
+    // Poner la nueva tupla en el final de la cola si hay cola
+    if (!previous) 
+        previous->next = new_tupla;
+
+    // Comprobamos si es la primera tupla
+    if (head->key == NULL)
+        head = new_tupla;
 
     pthread_mutex_unlock(&tupla_mutex);
     return 0;
@@ -78,5 +80,45 @@ int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coo
 
     pthread_mutex_unlock(&tupla_mutex);
     return -1;  // Clave no encontrada
+}
+
+int modify_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
+    if (N_value2 < 1 || N_value2 > MAX_VECTOR) return -1;
+    pthread_mutex_lock(&tupla_mutex);
+    Tupla *current = head;
+    while (current) {
+        if (current->key == key) { // Mirar si la clave esta en el programa
+            strncpy(current->value1, value1, MAX_STRING - 1);
+            current->N_value2 = N_value2;
+            memcpy(current->V_value2, V_value2, N_value2 * sizeof(double));
+            current->value3 = value3;
+            pthread_mutex_unlock(&tupla_mutex);
+            return 0;
+        }
+        current = current->next; // Convertir en NULL si no hay siguiente o iterar
+    } // Si no se encuentra la clave, dará error.
+
+    pthread_mutex_unlock(&tupla_mutex);
+    return -1;
+}
+
+int delete_key(int key) {
+    pthread_mutex_lock(&tupla_mutex);
+    Tupla *current = head;
+    Tupla *previous = NULL;
+    while (current) {
+        if (current->key == key) { // Mirar si la clave esta en el programa
+            if (!previous) 
+                previous->next = current->next;
+
+            free(current);
+            return 0;
+        }
+        previous = current;
+        current = current->next; // Convertir en NULL si no hay siguiente o iterar
+    } // Si no se encuentra la clave, dará error.
+
+    pthread_mutex_unlock(&tupla_mutex);
+    return -1;
 }
 

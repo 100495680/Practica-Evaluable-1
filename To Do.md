@@ -1,0 +1,1 @@
+[] Agregar el tratamiento de errores en el servidor para que le pase al cliente el error correspondiente
