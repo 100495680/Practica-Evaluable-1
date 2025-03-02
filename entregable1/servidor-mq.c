@@ -1,122 +1,82 @@
+#include "claves.h"
+#include <mqueue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mqueue.h>
-#include "claves.h"
+#include <unistd.h>
 
-#define QUEUE_NAME "/cola_servidor"
-#define RESPONSE_QUEUE_NAME "/cola_respuesta"
-#define MAX_MSG_SIZE 1024
+#define MAX_MSG_SIZE sizeof(struct peticion)  // Define el tamaño máximo del mensaje
+#define MAX_QUEUE_MESSAGES 10  // Número máximo de mensajes en la cola
 
-void procesar_mensaje(char *mensaje, char *respuesta) {
-    char comando[20];
-    int key, N_value2;
-    char value1[MAX_STRING];
-    double V_value2[MAX_VECTOR];
-    struct Coord value3;
-    int resultado;
+void tratar_peticion(struct peticion *p) {
+    struct respuesta r;
+    printf("Procesando operación: %d para la clave: %d\n", p->op, p->key);
 
-    sscanf(mensaje, "%s", comando);
-
-    if (strcmp(comando, "SET") == 0) {
-        sscanf(mensaje, "SET %d %s %d", &key, value1, &N_value2);
-        char *ptr = strchr(mensaje, ' ') + 1; // Saltar el primer espacio
-        ptr = strchr(ptr, ' ') + 1; // Saltar el segundo espacio
-        ptr = strchr(ptr, ' ') + 1; // Saltar el tercer espacio
-
-        for (int i = 0; i < N_value2; i++) {
-            sscanf(ptr, "%lf", &V_value2[i]);
-            ptr = strchr(ptr, ' ') + 1;
-        }
-        sscanf(ptr, "%d %d", &value3.x, &value3.y);
-
-        resultado = set_value(key, value1, N_value2, V_value2, value3);
-    } else if (strcmp(comando, "GET") == 0) {
-        sscanf(mensaje, "GET %d", &key);
-        resultado = get_value(key, value1, &N_value2, V_value2, &value3);
-        if (resultado == 0) {
-            snprintf(respuesta, MAX_MSG_SIZE, "%s %d", value1, N_value2);
-            for (int i = 0; i < N_value2; i++) {
-                snprintf(respuesta + strlen(respuesta), MAX_MSG_SIZE - strlen(respuesta), " %lf", V_value2[i]);
-            }
-            snprintf(respuesta + strlen(respuesta), MAX_MSG_SIZE - strlen(respuesta), " %d %d", value3.x, value3.y);
-        } else {
-            strcpy(respuesta, "ERROR");
-        }
-    } else if (strcmp(comando, "MODIFY") == 0) {
-        sscanf(mensaje, "MODIFY %d %s %d", &key, value1, &N_value2);
-        char *ptr = strchr(mensaje, ' ') + 1;
-        ptr = strchr(ptr, ' ') + 1;
-        ptr = strchr(ptr, ' ') + 1;
-
-        for (int i = 0; i < N_value2; i++) {
-            sscanf(ptr, "%lf", &V_value2[i]);
-            ptr = strchr(ptr, ' ') + 1;
-        }
-        sscanf(ptr, "%d %d", &value3.x, &value3.y);
-
-        resultado = modify_value(key, value1, N_value2, V_value2, value3);
-    } else if (strcmp(comando, "DELETE") == 0) {
-        sscanf(mensaje, "DELETE %d", &key);
-        resultado = delete_key(key);
-    } else if (strcmp(comando, "EXIST") == 0) {
-        sscanf(mensaje, "EXIST %d", &key);
-        resultado = exist(key);
-    } else if (strcmp(comando, "DESTROY") == 0) {
-        resultado = destroy();
-    } else {
-        resultado = -1;
+    switch (p->op) {
+        case 0:
+            printf("Ejecutando destroy()\n");
+            r.status = destroy();
+            break;
+        case 1:
+            printf("Ejecutando set_value() para key=%d\n", p->key);
+            r.status = set_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
+            break;
+        case 2:
+            printf("Ejecutando get_value() para key=%d\n", p->key);
+            r.status = get_value(p->key, r.value1, &r.N_value2, r.V_value2, &r.value3);
+            break;
+        default:
+            printf("Operación no reconocida: %d\n", p->op);
+            r.status = -1;
     }
 
-    snprintf(respuesta, MAX_MSG_SIZE, "%d", resultado);
+    // Abrir la cola del cliente para enviar la respuesta
+    int qr = mq_open(p->q_name, O_WRONLY);
+    if (qr == -1) {
+        perror("Error al abrir la cola del cliente para responder");
+        return;
+    }
+
+    printf("Enviando respuesta al cliente, tamaño: %lu bytes\n", sizeof(struct respuesta));
+
+    if (mq_send(qr, (char *)&r, sizeof(struct respuesta), 0) == -1) {
+        perror("Error al enviar la respuesta al cliente");
+    }
+
+    mq_close(qr);
 }
 
-int main() {
-    mqd_t mq, mq_resp;
-    struct mq_attr attr;
-    char buffer[MAX_MSG_SIZE];
-    char respuesta[MAX_MSG_SIZE];
 
+int main() {
+    struct peticion p;
+    unsigned int prio;
+
+    // Definir atributos de la cola de mensajes
+    struct mq_attr attr;
     attr.mq_flags = 0;
-    attr.mq_maxmsg = 10;
+    attr.mq_maxmsg = MAX_QUEUE_MESSAGES;
     attr.mq_msgsize = MAX_MSG_SIZE;
     attr.mq_curmsgs = 0;
 
-    mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, 0644, &attr);
-    if (mq == -1) {
-        perror("Error al abrir la cola de mensajes del servidor");
-        return 1;
+    // Crear la cola del servidor con el tamaño adecuado
+    int qs = mq_open(SERVER_QUEUE, O_CREAT | O_RDONLY, 0700, &attr);
+    if (qs == -1) {
+        perror("Error al abrir la cola del servidor");
+        return -1;
     }
 
-    mq_resp = mq_open(RESPONSE_QUEUE_NAME, O_CREAT | O_WRONLY, 0644, &attr);
-    if (mq_resp == -1) {
-        perror("Error al abrir la cola de respuesta");
-        mq_close(mq);
-        return 1;
-    }
-
-    printf("Servidor esperando peticiones...\n");
+    printf("Servidor iniciado y esperando peticiones...\n");
 
     while (1) {
-        ssize_t bytes_leidos = mq_receive(mq, buffer, MAX_MSG_SIZE, NULL);
-        if (bytes_leidos >= 0) {
-            buffer[bytes_leidos] = '\0';
-            printf("Mensaje recibido: %s\n", buffer);
-
-            procesar_mensaje(buffer, respuesta);
-
-            if (mq_send(mq_resp, respuesta, strlen(respuesta) + 1, 0) == -1) {
-                perror("Error al enviar respuesta al cliente");
-            }
-        } else {
-            perror("Error al recibir mensaje");
+        if (mq_receive(qs, (char *)&p, MAX_MSG_SIZE, &prio) == -1) {
+            perror("Error al recibir petición en el servidor");
+            continue;
         }
+
+        printf("Servidor recibió petición: op=%d, key=%d, value1=%s\n",
+               p.op, p.key, p.value1);
+
+        tratar_peticion(&p);
     }
-
-    mq_close(mq);
-    mq_unlink(QUEUE_NAME);
-    mq_close(mq_resp);
-    mq_unlink(RESPONSE_QUEUE_NAME);
-
-    return 0;
 }
+
