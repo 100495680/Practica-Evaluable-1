@@ -122,3 +122,16 @@ int delete_key(int key) {
     return -1;
 }
 
+int exist(int key) {
+    pthread_mutex_lock(&tupla_mutex);
+    Tupla *current = head;
+    while (current) {
+        if (current->key == key) { // Mirar si la clave esta en el programa
+            return 1;
+        }
+        current = current->next; // Convertir en NULL si no hay siguiente o iterar
+    } // Si no se encuentra la clave, dará 0.
+
+    pthread_mutex_unlock(&tupla_mutex);
+    return 0;
+}
