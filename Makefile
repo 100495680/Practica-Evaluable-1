@@ -4,15 +4,20 @@ LDFLAGS = -lrt -pthread
 
 # Archivos fuente
 SRV_SRC = servidor-mq.c claves.c
-CLI_SRC = app-cliente.c
+CLI_SRC_1 = app-cliente1.c
+CLI_SRC_2 = app-cliente2.c
+CLI_SRC_3 = app-cliente3.c
 PROXY_SRC = proxy-mq.c
 
 # Ejecutables y biblioteca compartida
 SERVER = servidor
-CLIENT = cliente
+CLIENT_1 = cliente1
+CLIENT_2 = cliente2
+CLIENT_3 = cliente3
+
 LIBRARY = libclaves.so
 
-all: $(SERVER) $(LIBRARY) $(CLIENT)
+all: $(SERVER) $(LIBRARY) $(CLIENT_1) $(CLIENT_2) $(CLIENT_3)
 
 # Compilar el servidor
 $(SERVER): $(SRV_SRC)
@@ -22,9 +27,19 @@ $(SERVER): $(SRV_SRC)
 $(LIBRARY): $(PROXY_SRC)
 	$(CC) $(CFLAGS) -shared -o $(LIBRARY) $(PROXY_SRC) $(LDFLAGS)
 
-# Compilar el cliente con la librería compartida
-$(CLIENT): $(CLI_SRC) $(LIBRARY)
-	$(CC) $(CFLAGS) -o $(CLIENT) $(CLI_SRC) -L. -lclaves $(LDFLAGS)
+# Compilar el cliente 1 con la librería compartida
+$(CLIENT_1): $(CLI_SRC_1) $(LIBRARY)
+	$(CC) $(CFLAGS) -o $(CLIENT_1) $(CLI_SRC_1) -L. -lclaves $(LDFLAGS)
+
+
+# Compilar el cliente 2 con la librería compartida
+$(CLIENT_2): $(CLI_SRC_2) $(LIBRARY)
+	$(CC) $(CFLAGS) -o $(CLIENT_2) $(CLI_SRC_2) -L. -lclaves $(LDFLAGS)
+
+
+# Compilar el cliente 3 con la librería compartida
+$(CLIENT_3): $(CLI_SRC_3) $(LIBRARY)
+	$(CC) $(CFLAGS) -o $(CLIENT_3) $(CLI_SRC_3) -L. -lclaves $(LDFLAGS)
 
 clean:
 	rm -f $(SERVER) $(CLIENT) $(LIBRARY) *.o
