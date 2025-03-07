@@ -10,14 +10,11 @@ int main() {
 
 
     // Prueba de exist sin existir
-    printf("¿Existe clave?...\n");
-    response = exist(key);
+    printf("Destruimos la lista...\n");
+    response = destroy();
     if (response == 0) {
-        printf("No existe la clave\n");
+        printf("Lista destruida\n");
     } else {
-        if (response == 1) {
-            printf("Existe la clave\n");
-        }
         if (response == -1) {
             printf("Error al insertar la clave\n");
         }
@@ -26,27 +23,12 @@ int main() {
         }
     }
 
-    // Prueba de exist existiendo
+    // Prueba de exist sin existir
     printf("Insertando clave...\n");
     response = set_value(key, v1, 3, v2, v3);
     if (response == 0) {
-        printf("Clave insertada correctamente\n");
-    } else {
-        if (response == -1) {
-            printf("Error al insertar la clave\n");
-        }
-        if (response == -2) {
-            printf("Error en el servidor\n");
-        }
-    }
-    printf("¿Existe clave?...\n");
-    response = exist(key);
-    if (response == 0) {
         printf("No existe la clave\n");
     } else {
-        if (response == 1) {
-            printf("Existe la clave\n");
-        }
         if (response == -1) {
             printf("Error al insertar la clave\n");
         }
@@ -54,8 +36,6 @@ int main() {
             printf("Error en el servidor\n");
         }
     }
-
-    
 
     return 0;
 }
