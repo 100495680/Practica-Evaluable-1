@@ -9,12 +9,11 @@ int main() {
     int response;
 
 
-    for (int i=0; i < 30000; i++) {
-    // Prueba de set value con 30 mil claves, se puede probar la concurrencia corriendo otros procesos mientras este está en ejecución.
-    printf("Insertando clave...\n");
-    response = set_value(key, v1, 3, v2, v3);
+    // Prueba de exist sin existir
+    printf("Destruimos la lista...\n");
+    response = destroy();
     if (response == 0) {
-        printf("Clave insertada correctamente\n");
+        printf("Lista destruida\n");
     } else {
         if (response == -1) {
             printf("Error al insertar la clave\n");
@@ -23,7 +22,19 @@ int main() {
             printf("Error en el servidor\n");
         }
     }
-    key++;
+
+    // Prueba de exist sin existir
+    printf("Insertando clave...\n");
+    response = set_value(key, v1, 3, v2, v3);
+    if (response == 0) {
+        printf("No existe la clave\n");
+    } else {
+        if (response == -1) {
+            printf("Error al insertar la clave\n");
+        }
+        if (response == -2) {
+            printf("Error en el servidor\n");
+        }
     }
 
     return 0;

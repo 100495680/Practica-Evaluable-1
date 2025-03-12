@@ -42,6 +42,7 @@ int main() {
         }
     }
 
+<<<<<<< HEAD
     // Prueba de modify value
     printf("Modificando clave...\n");
     strncpy(v1, "Ejemplo modificado", MAX_STRING - 1);
@@ -117,6 +118,8 @@ int main() {
             printf("Error en el servidor\n");
         }
     }
+=======
+>>>>>>> 839a6c159ca1185ea377fad430756c9ec3cdfefc
 
     return 0;
 }
