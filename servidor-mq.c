@@ -80,8 +80,13 @@ int main() {
     printf("Servidor iniciado y esperando peticiones...\n");
 
     while (1) {
-        p = malloc(sizeof(Peticion)); // Asignar memoria por que lo vamos a mandar a un thread diferente
+        struct peticion *p = (struct peticion *)malloc(sizeof(struct peticion)); // Correctly allocate memory for struct peticion
         
+        if (p == NULL) {
+            perror("Error al asignar memoria para la petición");
+            continue;
+        }
+
         if (mq_receive(qs, (char *)p, MAX_MSG_SIZE, &prio) == -1) {
             perror("Error al recibir petición en el servidor"); // Aquí no podemos mandar un -2 por que no tenemos la cola del cliente
             free(p);
@@ -91,9 +96,11 @@ int main() {
         printf("Servidor recibió petición: op=%d, key=%d, value1=%s\n", p->op, p->key, p->value1);
         
         pthread_t thread;
-        if (pthread_create(&thread, NULL, (void *)tratar_peticion, (void *)p) != 0) {
+        if (pthread_create(&thread, NULL, (void *(*)(void *))tratar_peticion, (void *)p) != 0) {
             perror("Error al crear thread");
             free(p);
+        } else {
+            pthread_detach(thread); // Ensure the thread resources are released when it terminates
         }
     }
 }
