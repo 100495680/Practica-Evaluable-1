@@ -2,12 +2,12 @@
 #include "claves.h"
 
 int main() {
+
     int key = 10;
     char v1[MAX_STRING] = "Ejemplo";
     double v2[MAX_VECTOR] = {1.1, 2.2, 3.3};
     struct Coord v3 = {5, 6};
     int response;
-
 
     // Prueba de set value
     printf("Insertando clave...\n");
@@ -28,7 +28,6 @@ int main() {
     double retrieved_v2[MAX_VECTOR];
     struct Coord retrieved_v3;
 
-
     // Prueba de get value
     printf("Obteniendo clave...\n");
     response = get_value(key, retrieved_v1, &N_value2, retrieved_v2, &retrieved_v3);
@@ -42,7 +41,6 @@ int main() {
             printf("Error en el servidor\n");
         }
     }
-
 
     // Prueba de modify value
     printf("Modificando clave...\n");
@@ -72,7 +70,6 @@ int main() {
             printf("Error en el servidor\n");
         }
     }
-
 
     // Prueba de exist sin existir
     printf("¿Existe clave?...\n");
@@ -104,6 +101,7 @@ int main() {
             printf("Error en el servidor\n");
         }
     }
+    
     printf("¿Existe clave?...\n");
     response = exist(key);
     if (response == 0) {

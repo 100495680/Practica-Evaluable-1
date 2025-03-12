@@ -80,15 +80,21 @@ int main() {
     printf("Servidor iniciado y esperando peticiones...\n");
 
     while (1) {
-        if (mq_receive(qs, (char *)&p, MAX_MSG_SIZE, &prio) == -1) {
-            perror("Error al recibir petición en el servidor");
+        p = malloc(sizeof(Peticion)); // Asignar memoria por que lo vamos a mandar a un thread diferente
+        
+        if (mq_receive(qs, (char *)p, MAX_MSG_SIZE, &prio) == -1) {
+            perror("Error al recibir petición en el servidor"); // Aquí no podemos mandar un -2 por que no tenemos la cola del cliente
+            free(p);
             continue;
         }
 
-        printf("Servidor recibió petición: op=%d, key=%d, value1=%s\n",
-               p.op, p.key, p.value1);
-
-        tratar_peticion(&p);
+        printf("Servidor recibió petición: op=%d, key=%d, value1=%s\n", p->op, p->key, p->value1);
+        
+        pthread_t thread;
+        if (pthread_create(&thread, NULL, (void *)tratar_peticion, (void *)p) != 0) {
+            perror("Error al crear thread");
+            free(p);
+        }
     }
 }
 
