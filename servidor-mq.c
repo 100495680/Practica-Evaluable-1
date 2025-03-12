@@ -60,7 +60,6 @@ void tratar_peticion(struct peticion *p) {
 
 
 int main() {
-    struct peticion p;
     unsigned int prio;
 
     // Definir atributos de la cola de mensajes
@@ -80,7 +79,7 @@ int main() {
     printf("Servidor iniciado y esperando peticiones...\n");
 
     while (1) {
-        struct peticion *p = (struct peticion *)malloc(sizeof(struct peticion)); // Correctly allocate memory for struct peticion
+        struct peticion* p = (struct peticion *)malloc(sizeof(struct peticion)); // Correctly allocate memory for struct peticion
         
         if (p == NULL) {
             perror("Error al asignar memoria para la petición");
