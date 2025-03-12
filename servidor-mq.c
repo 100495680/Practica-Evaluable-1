@@ -8,7 +8,8 @@
 #define MAX_MSG_SIZE sizeof(struct peticion)  // Define el tamaño máximo del mensaje
 #define MAX_QUEUE_MESSAGES 10  // Número máximo de mensajes en la cola
 
-void tratar_peticion(struct peticion *p) {
+void *tratar_peticion(void *arg) {
+    struct peticion *p = (struct peticion *)arg;
     struct respuesta r;
     printf("Procesando operación: %d para la clave: %d\n", p->op, p->key);
 
@@ -54,8 +55,9 @@ void tratar_peticion(struct peticion *p) {
     if (mq_send(qr, (char *)&r, sizeof(struct respuesta), 0) == -1) {
         perror("Error al enviar la respuesta al cliente");
     }
-
+    free(p);
     mq_close(qr);
+    return NULL;
 }
 
 
