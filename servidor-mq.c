@@ -11,35 +11,35 @@
 void *tratar_peticion(void *arg) {
     struct peticion *p = (struct peticion *)arg;
     struct respuesta r;
-    printf("Procesando operación: %d para la clave: %d\n", p->op, p->key);
+    // printf("Procesando operación: %d para la clave: %d\n", p->op, p->key);
 
     switch (p->op) {
         case 0:
-            printf("Ejecutando destroy()\n");
+            // printf("Ejecutando destroy()\n");
             r.status = destroy();
             break;
         case 1:
-            printf("Ejecutando set_value() para key=%d\n", p->key);
+            // printf("Ejecutando set_value() para key=%d\n", p->key);
             r.status = set_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
             break;
         case 2:
-            printf("Ejecutando get_value() para key=%d\n", p->key);
+            // printf("Ejecutando get_value() para key=%d\n", p->key);
             r.status = get_value(p->key, r.value1, &r.N_value2, r.V_value2, &r.value3);
             break;
         case 3:
-            printf("Ejecutando modify_value() para key=%d\n", p->key);
+            // printf("Ejecutando modify_value() para key=%d\n", p->key);
             r.status = modify_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
             break;
         case 4:
-            printf("Ejecutando delete() para key=%d\n", p->key);
+            // printf("Ejecutando delete() para key=%d\n", p->key);
             r.status = delete_key(p->key);
             break;
         case 5:
-            printf("Ejecutando exist() para key=%d\n", p->key);
+            // printf("Ejecutando exist() para key=%d\n", p->key);
             r.status = exist(p->key);
             break;
         default:
-            printf("Operación no reconocida: %d\n", p->op);
+            // printf("Operación no reconocida: %d\n", p->op);
             r.status = -1;
     }
 
@@ -51,7 +51,7 @@ void *tratar_peticion(void *arg) {
         return NULL;
     }
 
-    printf("Enviando respuesta al cliente, tamaño: %lu bytes\n", sizeof(struct respuesta));
+    // printf("Enviando respuesta al cliente, tamaño: %lu bytes\n", sizeof(struct respuesta));
 
     if (mq_send(qr, (char *)&r, sizeof(struct respuesta), 0) == -1) {
         perror("Error al enviar la respuesta al cliente");
@@ -81,7 +81,7 @@ int main() {
         return -1;
     }
 
-    printf("Servidor iniciado y esperando peticiones...\n");
+    // printf("Servidor iniciado y esperando peticiones...\n");
 
     while (1) {
         struct peticion* p = (struct peticion *)malloc(sizeof(struct peticion)); // Correctly allocate memory for struct peticion
@@ -97,7 +97,7 @@ int main() {
             continue;
         }
 
-        printf("Servidor recibió petición: op=%d, key=%d, value1=%s\n", p->op, p->key, p->value1);
+        // printf("Servidor recibió petición: op=%d, key=%d, value1=%s\n", p->op, p->key, p->value1);
         
         pthread_t thread;
         if (pthread_create(&thread, NULL, (void *(*)(void *))tratar_peticion, (void *)p) != 0) {

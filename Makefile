@@ -8,6 +8,7 @@ CLI_SRC_1 = app-cliente1.c
 CLI_SRC_2 = app-cliente2.c
 CLI_SRC_3 = app-cliente3.c
 CLI_SRC_4 = app-cliente4.c
+CLI_SRC_5 = app-cliente5.c
 PROXY_SRC = proxy-mq.c
 
 # Ejecutables y biblioteca compartida
@@ -16,10 +17,11 @@ CLIENT_1 = cliente1
 CLIENT_2 = cliente2
 CLIENT_3 = cliente3
 CLIENT_4 = cliente4
+CLIENT_5 = cliente5
 
 LIBRARY = libclaves.so
 
-all: $(SERVER) $(LIBRARY) $(CLIENT_1) $(CLIENT_2) $(CLIENT_3) $(CLIENT_4)
+all: $(SERVER) $(LIBRARY) $(CLIENT_1) $(CLIENT_2) $(CLIENT_3) $(CLIENT_4) $(CLIENT_5)
 
 # Compilar el servidor
 $(SERVER): $(SRV_SRC)
@@ -47,6 +49,11 @@ $(CLIENT_3): $(CLI_SRC_3) $(LIBRARY)
 # Compilar el cliente 4 con la librería compartida
 $(CLIENT_4): $(CLI_SRC_4) $(LIBRARY)
 	$(CC) $(CFLAGS) -o $(CLIENT_4) $(CLI_SRC_4) -L. -lclaves $(LDFLAGS)
+
+
+# Compilar el cliente 5 con la librería compartida
+$(CLIENT_5): $(CLI_SRC_5) $(LIBRARY)
+	$(CC) $(CFLAGS) -o $(CLIENT_5) $(CLI_SRC_5) -L. -lclaves $(LDFLAGS)
 
 clean:
 	rm -f $(SERVER) $(CLIENT) $(LIBRARY) *.o
