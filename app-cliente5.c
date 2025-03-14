@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "claves.h"
-
+// Este cliente solo funciona como checkeo de que las claves que se introducen en Cliente3 funcionan asi que solo
+// funciona con este cliente ejecutado primero
 int main() {
     int key = 2910;
     char v1[MAX_STRING] = "Ejemplo";
