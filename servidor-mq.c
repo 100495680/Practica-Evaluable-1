@@ -47,13 +47,16 @@ void *tratar_peticion(void *arg) {
     int qr = mq_open(p->q_name, O_WRONLY);
     if (qr == -1) {
         perror("Error al abrir la cola del cliente para responder");
-        return;
+        free(p);
+        return NULL;
     }
 
     printf("Enviando respuesta al cliente, tamaño: %lu bytes\n", sizeof(struct respuesta));
 
     if (mq_send(qr, (char *)&r, sizeof(struct respuesta), 0) == -1) {
         perror("Error al enviar la respuesta al cliente");
+        free(p);
+        return NULL;
     }
     free(p);
     mq_close(qr);

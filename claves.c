@@ -26,13 +26,16 @@ int destroy() {
 }
 
 int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
-    if (N_value2 < 1 || N_value2 > MAX_VECTOR) return -1;
     pthread_mutex_lock(&tupla_mutex);
+    if (N_value2 < 1 || N_value2 > MAX_VECTOR) {
+        pthread_mutex_unlock(&tupla_mutex);
+        return -1;
+    };
     Tupla *current = head;
     Tupla *previous = NULL;
     while (current) { // Iterar hasta la última tupla
         previous = current;
-        current = current->next;         
+        current = current->next;       
     }
 
     Tupla *new_tupla = (Tupla *) malloc(sizeof(Tupla));
@@ -111,6 +114,7 @@ int delete_key(int key) {
             if (previous) 
                 previous->next = current->next;
             free(current);
+            head = NULL;
             pthread_mutex_unlock(&tupla_mutex);
             return 0;
         }

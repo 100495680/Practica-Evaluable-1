@@ -88,9 +88,14 @@ int main() {
         }
     }
 
+    key = 11;
+    char value1[MAX_STRING] = "Ejemplo";
+    double value2[MAX_VECTOR] = {1.1, 2.2, 3.3};
+    struct Coord value3 = {5, 6};
+
     // Prueba de exist existiendo
     printf("Insertando clave...\n");
-    response = set_value(key, v1, 3, v2, v3);
+    response = set_value(key, value1, 3, value2, value3);
     if (response == 0) {
         printf("Clave insertada correctamente\n");
     } else {
