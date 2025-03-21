@@ -1,61 +1,37 @@
+# Variables
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread -lrt -fPIC
-LDFLAGS = -lrt -pthread
+CFLAGS = -Wall -g -pthread
+LIBNAME = libclaves.so
 
 # Archivos fuente
-SRV_SRC = servidor-mq.c claves.c
-CLI_SRC_1 = app-cliente1.c
-CLI_SRC_2 = app-cliente2.c
-CLI_SRC_3 = app-cliente3.c
-CLI_SRC_4 = app-cliente4.c
-CLI_SRC_5 = app-cliente5.c
-PROXY_SRC = proxy-mq.c
+CLIENTE = app-cliente
+SERVIDOR = servidor-sock
 
-# Ejecutables y biblioteca compartida
-SERVER = servidor
-CLIENT_1 = cliente1
-CLIENT_2 = cliente2
-CLIENT_3 = cliente3
-CLIENT_4 = cliente4
-CLIENT_5 = cliente5
+# Objetos
+PROXY_OBJ = proxy-sock.o
 
-LIBRARY = libclaves.so
+.PHONY: all clean
 
-all: $(SERVER) $(LIBRARY) $(CLIENT_1) $(CLIENT_2) $(CLIENT_3) $(CLIENT_4) $(CLIENT_5)
+all: $(LIBNAME) $(CLIENTE) $(SERVIDOR)
 
-# Compilar el servidor
-$(SERVER): $(SRV_SRC)
-	$(CC) $(CFLAGS) -o $(SERVER) $(SRV_SRC) $(LDFLAGS)
+# Biblioteca compartida solo con proxy
+$(LIBNAME): $(PROXY_OBJ)
+	$(CC) -shared -o $@ $^
 
-# Compilar el proxy y generar la librería compartida
-$(LIBRARY): $(PROXY_SRC)
-	$(CC) $(CFLAGS) -shared -o $(LIBRARY) $(PROXY_SRC) $(LDFLAGS)
+# Cliente enlazado con la biblioteca
+$(CLIENTE): app-cliente.c $(LIBNAME)
+	$(CC) $(CFLAGS) -o $@ app-cliente.c -L. -lclaves
 
-# Compilar el cliente 1 con la librería compartida
-$(CLIENT_1): $(CLI_SRC_1) $(LIBRARY)
-	$(CC) $(CFLAGS) -o $(CLIENT_1) $(CLI_SRC_1) -L. -lclaves $(LDFLAGS)
+# Servidor con claves.c real
+$(SERVIDOR): servidor-sock.c claves.o
+	$(CC) $(CFLAGS) -o $@ servidor-sock.c claves.o
 
+# Compilar objetos
+proxy-sock.o: proxy-sock.c claves.h
+	$(CC) $(CFLAGS) -fPIC -c proxy-sock.c
 
-# Compilar el cliente 2 con la librería compartida
-$(CLIENT_2): $(CLI_SRC_2) $(LIBRARY)
-	$(CC) $(CFLAGS) -o $(CLIENT_2) $(CLI_SRC_2) -L. -lclaves $(LDFLAGS)
-
-
-# Compilar el cliente 3 con la librería compartida
-$(CLIENT_3): $(CLI_SRC_3) $(LIBRARY)
-	$(CC) $(CFLAGS) -o $(CLIENT_3) $(CLI_SRC_3) -L. -lclaves $(LDFLAGS)
-
-
-# Compilar el cliente 4 con la librería compartida
-$(CLIENT_4): $(CLI_SRC_4) $(LIBRARY)
-	$(CC) $(CFLAGS) -o $(CLIENT_4) $(CLI_SRC_4) -L. -lclaves $(LDFLAGS)
-
-
-# Compilar el cliente 5 con la librería compartida
-$(CLIENT_5): $(CLI_SRC_5) $(LIBRARY)
-	$(CC) $(CFLAGS) -o $(CLIENT_5) $(CLI_SRC_5) -L. -lclaves $(LDFLAGS)
+claves.o: claves.c claves.h
+	$(CC) $(CFLAGS) -fPIC -c claves.c
 
 clean:
-	rm -f $(SERVER) $(CLIENT) $(LIBRARY) *.o
-
-rebuild: clean all
+	rm -f *.o *.so $(CLIENTE) $(SERVIDOR)
