@@ -12,7 +12,7 @@ typedef struct Tupla {
 Tupla *head = NULL;
 pthread_mutex_t tupla_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int destroy() {
+int destroy(void) {
     pthread_mutex_lock(&tupla_mutex);
     Tupla *current = head;
     while (current) {
