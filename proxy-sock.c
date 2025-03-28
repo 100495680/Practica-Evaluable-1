@@ -6,21 +6,56 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 #define MAX_BUFFER 2048
 
 // Lee del socket hasta encontrar el caracter nulo ('\0') y lo guarda en buffer
-int readLine(int sd, char *buffer, size_t max) {
-    size_t pos = 0;
-    char c;
-    while (pos < max - 1) {
-        if (read(sd, &c, 1) <= 0) return -1;  // Error o conexión cerrada
-        if (c == '\0') break;               // Fin de la cadena
-        buffer[pos++] = c;
+ssize_t readLine(int fd, void *buffer, size_t n)
+{
+    ssize_t numRead;  /* num of bytes fetched by last read() */
+    size_t totRead;	  /* total bytes read so far */
+    char *buf;
+    char ch;
+
+
+    if (n <= 0 || buffer == NULL) {
+        errno = EINVAL;
+        return -1;
     }
-    buffer[pos] = '\0';  // Asegura terminación nula
-    return 0;
+
+    buf = buffer;
+    totRead = 0;
+
+    for (;;) {
+        numRead = read(fd, &ch, 1);	/* read a byte */
+
+        if (numRead == -1) {
+            if (errno == EINTR)	/* interrupted -> restart read() */
+                continue;
+            else
+                return -1;		/* some other error */
+        } else if (numRead == 0) {	/* EOF */
+            if (totRead == 0)	/* no byres read; return 0 */
+                return 0;
+            else
+                break;
+        } else {			/* numRead must be 1 if we get here*/
+            if (ch == '\n')
+                break;
+            if (ch == '\0')
+                break;
+            if (totRead < n - 1) {		/* discard > (n-1) bytes */
+                totRead++;
+                *buf++ = ch;
+            }
+        }
+    }
+
+    *buf = '\0';
+    return totRead;
 }
+
 
 // Envía por el socket una cadena terminada en nulo ('\0')
 int writeLine(int sd, const char *str) {

@@ -7,27 +7,74 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 #define MAX_BUFFER 2048
 
 // Lee del socket una cadena terminada en nulo ('\0')
-int readLine(int sd, char *buffer, size_t max) {
-    size_t pos = 0;
-    char c;
-    while (pos < max - 1) {
-        if (read(sd, &c, 1) <= 0) return -1;
-        if (c == '\0') break;
-        buffer[pos++] = c;
+ssize_t readLine(int fd, void *buffer, size_t n)
+{
+    ssize_t numRead;  /* num of bytes fetched by last read() */
+    size_t totRead;	  /* total bytes read so far */
+    char *buf;
+    char ch;
+
+
+    if (n <= 0 || buffer == NULL) {
+        errno = EINVAL;
+        return -1;
     }
-    buffer[pos] = '\0';
-    return 0;
+
+    buf = buffer;
+    totRead = 0;
+
+    for (;;) {
+        numRead = read(fd, &ch, 1);	/* read a byte */
+
+        if (numRead == -1) {
+            if (errno == EINTR)	/* interrupted -> restart read() */
+                continue;
+            else
+                return -1;		/* some other error */
+        } else if (numRead == 0) {	/* EOF */
+            if (totRead == 0)	/* no byres read; return 0 */
+                return 0;
+            else
+                break;
+        } else {			/* numRead must be 1 if we get here*/
+            if (ch == '\n')
+                break;
+            if (ch == '\0')
+                break;
+            if (totRead < n - 1) {		/* discard > (n-1) bytes */
+                totRead++;
+                *buf++ = ch;
+            }
+        }
+    }
+
+    *buf = '\0';
+    return totRead;
 }
 
-// Envía por el socket una cadena terminada en nulo ('\0')
-int writeLine(int sd, const char *str) {
-    size_t len = strlen(str) + 1;
-    return write(sd, str, len) == len ? 0 : -1;
+int sendMessage(int socket, char * buffer, int len)
+{
+    int r;
+    int l = len;
+
+
+    do {
+        r = write(socket, buffer, l);
+        l = l -r;
+        buffer = buffer + r;
+    } while ((l>0) && (r>=0));
+
+    if (r < 0)
+        return (-1);   /* fail */
+    else
+        return(0);	/* full length has been sent */
 }
+
 
 // Función ejecutada por cada hilo que atiende a un cliente
 void *tratar_cliente(void *arg) {
@@ -82,7 +129,7 @@ void *tratar_cliente(void *arg) {
                 for (int i = 0; i < N; ++i)
                     snprintf(respuesta + strlen(respuesta), MAX_BUFFER - strlen(respuesta), " %lf", V_value2[i]);
                 snprintf(respuesta + strlen(respuesta), MAX_BUFFER - strlen(respuesta), " %d %d", value3.x, value3.y);
-                writeLine(sd, respuesta);
+                sendMessage(sd, respuesta, strlen(respuesta) + 1); // Usando sendMessage en lugar de writeLine
                 close(sd);
                 return NULL;
             }
@@ -100,10 +147,11 @@ void *tratar_cliente(void *arg) {
     }
 
     snprintf(respuesta, MAX_BUFFER, "%d", status);
-    writeLine(sd, respuesta);
+    sendMessage(sd, respuesta, strlen(respuesta) + 1); // Usando sendMessage en lugar de writeLine
     close(sd);
     return NULL;
 }
+
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
