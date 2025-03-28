@@ -58,9 +58,22 @@ ssize_t readLine(int fd, void *buffer, size_t n)
 
 
 // Envía por el socket una cadena terminada en nulo ('\0')
-int writeLine(int sd, const char *str) {
-    size_t len = strlen(str) + 1;
-    return write(sd, str, len) == len ? 0 : -1;
+int sendMessage(int socket, char * buffer, int len)
+{
+    int r;
+    int l = len;
+
+
+    do {
+        r = write(socket, buffer, l);
+        l = l -r;
+        buffer = buffer + r;
+    } while ((l>0) && (r>=0));
+
+    if (r < 0)
+        return (-1);   /* fail */
+    else
+        return(0);	/* full length has been sent */
 }
 
 // Función principal de envío/recepción con el servidor a través del socket TCP
@@ -98,7 +111,7 @@ int send_recv_text(const char *mensaje, char *respuesta) {
     }
 
     // Enviar petición y recibir respuesta
-    if (writeLine(sd, mensaje) < 0 || readLine(sd, respuesta, MAX_BUFFER) < 0) {
+    if (sendMessage(sd, (char *)mensaje, strlen(mensaje) + 1) < 0 || readLine(sd, respuesta, MAX_BUFFER) < 0) {
         close(sd);
         return -2;
     }
