@@ -9,7 +9,6 @@
 
 #define MAX_STRING 256
 #define MAX_VECTOR 32
-#define SERVER_QUEUE "/SERVIDOR"
 
 struct Coord {
     int x;

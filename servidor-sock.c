@@ -53,7 +53,7 @@ void *tratar_cliente(void *arg) {
     free(arg);
     char buffer[MAX_BUFFER];
 
-    if (recvMessage(sd, buffer, MAX_BUFFER) < 0) {
+    if (recvMessage(sd, buffer, sizeof(struct peticion)) < 0) {
         close(sd);
         return NULL;
     }
@@ -93,7 +93,7 @@ void *tratar_cliente(void *arg) {
     }
 
 
-    sendMessage(sd, (char *)&r, sizeof(r)+1);
+    sendMessage(sd, (char *)&r, sizeof(r));
     close(sd);
     return NULL;
 }

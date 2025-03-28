@@ -5,6 +5,12 @@ LIBNAME = libclaves.so
 
 # Archivos fuente
 CLIENTE = app-cliente
+CLIENTE1 = app-cliente1
+CLIENTE2 = app-cliente2
+CLIENTE3 = app-cliente3
+CLIENTE4 = app-cliente4
+CLIENTE5 = app-cliente5
+
 SERVIDOR = servidor-sock
 
 # Objetos
@@ -12,7 +18,7 @@ PROXY_OBJ = proxy-sock.o
 
 .PHONY: all clean
 
-all: $(LIBNAME) $(CLIENTE) $(SERVIDOR)
+all: $(LIBNAME) $(CLIENTE) $(CLIENTE1) $(CLIENTE2) $(CLIENTE3) $(CLIENTE4) $(CLIENTE5) $(SERVIDOR)
 
 # Biblioteca compartida solo con proxy
 $(LIBNAME): $(PROXY_OBJ)
@@ -21,6 +27,22 @@ $(LIBNAME): $(PROXY_OBJ)
 # Cliente enlazado con la biblioteca
 $(CLIENTE): app-cliente.c $(LIBNAME)
 	$(CC) $(CFLAGS) -o $@ app-cliente.c -L. -lclaves
+
+$(CLIENTE1): app-cliente1.c $(LIBNAME)
+	$(CC) $(CFLAGS) -o $@ app-cliente1.c -L. -lclaves
+
+$(CLIENTE2): app-cliente2.c $(LIBNAME)
+	$(CC) $(CFLAGS) -o $@ app-cliente2.c -L. -lclaves
+
+$(CLIENTE3): app-cliente3.c $(LIBNAME)
+	$(CC) $(CFLAGS) -o $@ app-cliente3.c -L. -lclaves
+
+$(CLIENTE4): app-cliente4.c $(LIBNAME)
+	$(CC) $(CFLAGS) -o $@ app-cliente4.c -L. -lclaves
+
+$(CLIENTE5): app-cliente5.c $(LIBNAME)
+	$(CC) $(CFLAGS) -o $@ app-cliente5.c -L. -lclaves
+
 
 # Servidor con claves.c real
 $(SERVIDOR): servidor-sock.c claves.o

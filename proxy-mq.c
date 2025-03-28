@@ -4,6 +4,8 @@
 #include <string.h>
 
 int send_recv(struct peticion *p, struct respuesta *r) {
+
+    
     char qr_name[1024]; //nombre de cola privada del cliente
     unsigned int prio = 0; //prioridad del mensaje
 

@@ -1,13 +1,21 @@
 #include "claves.h"
+#include <mqueue.h>
+#include <unistd.h>
+#include <string.h>
+#include "claves.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <netdb.h>
+#include <pthread.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
+#include <netdb.h>
+
 
 #define MAX_BUFFER 2048
+
 
 int sendMessage(int socket, char * buffer, int len)
 {
@@ -45,11 +53,8 @@ int recvMessage(int socket, char *buffer, int len)
 		return(0);	/* full length has been receive */
 }
 
-
-
-// Función principal de envío/recepción con el servidor a través del socket TCP
-int send_recv_text(const char *mensaje, char *respuesta) {
-    
+int send_recv(struct peticion *p, struct respuesta *r) {
+    printf("Dentro del send recieve");
     char *maquina; short puerto;
     struct sockaddr_in server_addr;
     struct hostent *hp;
@@ -87,105 +92,108 @@ int send_recv_text(const char *mensaje, char *respuesta) {
     }
 
     char buffer[MAX_BUFFER];
+    memcpy(buffer, &p, sizeof(p));
 
     // Enviar petición y recibir respuesta
-    if (sendMessage(sd, buffer, sizeof(buffer)+1)) {
+    if (sendMessage(sd, buffer, sizeof(struct peticion))) {
         close(sd);
         return -2;
     }
-
-    if (recvMessage(sd, buffer, sizeof(struct respuesta))) { // La structura respuesta ocupa 528 bytes 
+        // Aquí creo que tiene que ir al buffer
+    if (recvMessage(sd, buffer, sizeof(struct respuesta))) { // La structura respuesta ocupa 528 bytes
         close(sd);
         return -2;
     }
+    r = (struct respuesta *)buffer;
 
     close(sd);  // Cerrar socket
-    return 0;
+    return r->status;
 }
 
-// Implementación de set_value usando protocolo textual
-int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
-    if (N_value2 < 1 || N_value2 > MAX_VECTOR || strlen(value1) >= MAX_STRING) return -1;
 
-    char mensaje[MAX_BUFFER] = {0};
-    char respuesta[MAX_BUFFER];
-
-    // Construir la cadena de petición: "1 key value1 N v2[0] v2[1] ... v3.x v3.y"
-    snprintf(mensaje, MAX_BUFFER, "1 %d %s %d", key, value1, N_value2);
-    for (int i = 0; i < N_value2; ++i)
-        snprintf(mensaje + strlen(mensaje), MAX_BUFFER - strlen(mensaje), " %lf", V_value2[i]);
-    snprintf(mensaje + strlen(mensaje), MAX_BUFFER - strlen(mensaje), " %d %d", value3.x, value3.y);
-
-    int err = send_recv_text(mensaje, respuesta);
-    return err < 0 ? err : atoi(respuesta);
-}
-
-// Implementación de get_value con lectura de campos individuales
+// Implementación de get_value
 int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coord *value3) {
-    char mensaje[MAX_BUFFER];
-    char respuesta[MAX_BUFFER];
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 2;
+    p.key = key;
 
-    snprintf(mensaje, MAX_BUFFER, "2 %d", key);  // operación 2: get
-    int err = send_recv_text(mensaje, respuesta);
-    if (err < 0) return err;
+    struct respuesta r;
 
-    int status, n;
-    sscanf(respuesta, "%d %s %d", &status, value1, &n);  // leer status, value1 y N_value2
-    *N_value2 = n;
-
-    // Avanzar punteros para leer el vector de doubles y value3
-    char *ptr = strchr(respuesta, ' ') + 1; // saltar status
-    ptr = strchr(ptr, ' ') + 1;             // saltar value1
-    ptr = strchr(ptr, ' ') + 1;             // saltar N
-
-    for (int i = 0; i < n; ++i) {
-        V_value2[i] = atof(ptr);
-        ptr = strchr(ptr, ' ') + 1;
+    int status = send_recv(&p, &r); //llama a la función anterior que gestiona el envío del mensaje y la answer
+    if (status == 0) {
+        strncpy(value1, r.value1, MAX_STRING);
+        *N_value2 = r.N_value2;
+        memcpy(V_value2, r.V_value2, (*N_value2) * sizeof(double));
+        *value3 = r.value3;
     }
-    value3->x = atoi(ptr);
-    ptr = strchr(ptr, ' ') + 1;
-    value3->y = atoi(ptr);
 
     return status;
 }
 
-// Implementación de modify_value similar a set_value
+// Implementación de set_value
+int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
+    if (N_value2 < 1 || N_value2 > MAX_VECTOR) {
+        return -1;  // Error si el vector está fuera de rango
+    }
+
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 1;  // Código de operación para set_value
+    p.key = key;
+    strncpy(p.value1, value1, MAX_STRING - 1);
+    p.value1[MAX_STRING - 1] = '\0';  // Asegurar terminación nula
+    p.N_value2 = N_value2;
+    memcpy(p.V_value2, V_value2, N_value2 * sizeof(double));
+    p.value3 = value3;
+
+    struct respuesta r;
+    printf("Set Value ejecutado");
+    return send_recv(&p, &r);
+}
+
 int modify_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
-    if (N_value2 < 1 || N_value2 > MAX_VECTOR || strlen(value1) >= MAX_STRING) return -1;
+    if (N_value2 < 1 || N_value2 > MAX_VECTOR) {
+        return -1;  // Error si el vector está fuera de rango
+    }
 
-    char mensaje[MAX_BUFFER] = {0};
-    char respuesta[MAX_BUFFER];
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 3;  // Código de operación para modify_value
+    p.key = key;
+    strncpy(p.value1, value1, MAX_STRING - 1);
+    p.value1[MAX_STRING - 1] = '\0';  // Asegurar terminación nula
+    p.N_value2 = N_value2;
+    memcpy(p.V_value2, V_value2, N_value2 * sizeof(double));
+    p.value3 = value3;
 
-    snprintf(mensaje, MAX_BUFFER, "3 %d %s %d", key, value1, N_value2); // operación 3: modify
-    for (int i = 0; i < N_value2; ++i)
-        snprintf(mensaje + strlen(mensaje), MAX_BUFFER - strlen(mensaje), " %lf", V_value2[i]);
-    snprintf(mensaje + strlen(mensaje), MAX_BUFFER - strlen(mensaje), " %d %d", value3.x, value3.y);
+    struct respuesta r;
 
-    int err = send_recv_text(mensaje, respuesta);
-    return err < 0 ? err : atoi(respuesta);
+    return send_recv(&p, &r);
 }
 
-// Enviar petición para borrar una clave
-int delete_key(int key) {
-    char mensaje[MAX_BUFFER];
-    char respuesta[MAX_BUFFER];
-    snprintf(mensaje, MAX_BUFFER, "4 %d", key);  // operación 4: delete
-    int err = send_recv_text(mensaje, respuesta);
-    return err < 0 ? err : atoi(respuesta);
-}
-
-// Consultar existencia de clave
-int exist(int key) {
-    char mensaje[MAX_BUFFER];
-    char respuesta[MAX_BUFFER];
-    snprintf(mensaje, MAX_BUFFER, "5 %d", key);  // operación 5: exist
-    int err = send_recv_text(mensaje, respuesta);
-    return err < 0 ? err : atoi(respuesta);
-}
-
-// Petición para destruir todas las tuplas
 int destroy() {
-    char respuesta[MAX_BUFFER];
-    int err = send_recv_text("0", respuesta);  // operación 0: destroy
-    return err < 0 ? err : atoi(respuesta);
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 0;  // Código de operación para destroy
+    
+    struct respuesta r;
+
+    return send_recv(&p, &r);
+}
+
+int exist(int key) {
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 5;  // Código de operación para destroy
+    p.key = key;
+
+    struct respuesta r;
+
+    return send_recv(&p, &r);
+}
+
+int delete_key(int key) {
+    struct peticion p = {0};  // Inicializa toda la estructura a 0
+    p.op = 4;  // Código de operación para destroy
+    p.key = key;
+
+    struct respuesta r;
+
+    return send_recv(&p, &r);
 }
