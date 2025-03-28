@@ -10,24 +10,42 @@
 
 #define MAX_BUFFER 2048
 
-// Lee del socket una cadena terminada en nulo ('\0')
-int readLine(int sd, char *buffer, size_t max) {
-    size_t pos = 0;
-    char c;
-    while (pos < max - 1) {
-        if (read(sd, &c, 1) <= 0) return -1;
-        if (c == '\0') break;
-        buffer[pos++] = c;
-    }
-    buffer[pos] = '\0';
-    return 0;
+int sendMessage(int socket, char * buffer, int len)
+{
+	int r;
+	int l = len;
+		
+
+	do {	
+		r = write(socket, buffer, l);
+		l = l -r;
+		buffer = buffer + r;
+	} while ((l>0) && (r>=0));
+	
+	if (r < 0)
+		return (-1);   /* fail */
+	else
+		return(0);	/* full length has been sent */
 }
 
-// Envía por el socket una cadena terminada en nulo ('\0')
-int writeLine(int sd, const char *str) {
-    size_t len = strlen(str) + 1;
-    return write(sd, str, len) == len ? 0 : -1;
+int recvMessage(int socket, char *buffer, int len)
+{
+	int r;
+	int l = len;
+		
+
+	do {	
+		r = read(socket, buffer, l);
+		l = l -r ;
+		buffer = buffer + r;
+	} while ((l>0) && (r>=0));
+	
+	if (r < 0)
+		return (-1);   /* fallo */
+	else
+		return(0);	/* full length has been receive */
 }
+
 
 // Función ejecutada por cada hilo que atiende a un cliente
 void *tratar_cliente(void *arg) {
@@ -35,72 +53,47 @@ void *tratar_cliente(void *arg) {
     free(arg);
     char buffer[MAX_BUFFER];
 
-    if (readLine(sd, buffer, MAX_BUFFER) < 0) {
+    if (recvMessage(sd, buffer, MAX_BUFFER) < 0) {
         close(sd);
         return NULL;
     }
 
-    int op, key, N;
-    char value1[MAX_STRING];
-    double V_value2[MAX_VECTOR];
-    struct Coord value3;
-    char respuesta[MAX_BUFFER];
+    struct peticion *p = (struct peticion *)buffer;
+    struct respuesta r;
+    // printf("Procesando operación: %d para la clave: %d\n", p->op, p->key);
 
-    // Interpretar la operación
-    sscanf(buffer, "%d", &op);
-    char *ptr = strchr(buffer, ' ') + 1;
-
-    int status = -1;
-
-    switch (op) {
+    switch (p->op) {
         case 0:
-            status = destroy();
+            // printf("Ejecutando destroy()\n");
+            r.status = destroy();
             break;
         case 1:
-        case 3:
-            sscanf(ptr, "%d %s %d", &key, value1, &N);
-            ptr = strchr(ptr, ' ') + 1; // key
-            ptr = strchr(ptr, ' ') + 1; // value1
-            ptr = strchr(ptr, ' ') + 1; // N
-            for (int i = 0; i < N; ++i) {
-                V_value2[i] = atof(ptr);
-                ptr = strchr(ptr, ' ') + 1;
-            }
-            value3.x = atoi(ptr);
-            ptr = strchr(ptr, ' ') + 1;
-            value3.y = atoi(ptr);
-            if (op == 1)
-                status = set_value(key, value1, N, V_value2, value3);
-            else
-                status = modify_value(key, value1, N, V_value2, value3);
+            // printf("Ejecutando set_value() para key=%d\n", p->key);
+            r.status = set_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
             break;
         case 2:
-            sscanf(ptr, "%d", &key);
-            status = get_value(key, value1, &N, V_value2, &value3);
-            if (status == 0) {
-                snprintf(respuesta, MAX_BUFFER, "%d %s %d", status, value1, N);
-                for (int i = 0; i < N; ++i)
-                    snprintf(respuesta + strlen(respuesta), MAX_BUFFER - strlen(respuesta), " %lf", V_value2[i]);
-                snprintf(respuesta + strlen(respuesta), MAX_BUFFER - strlen(respuesta), " %d %d", value3.x, value3.y);
-                writeLine(sd, respuesta);
-                close(sd);
-                return NULL;
-            }
+            // printf("Ejecutando get_value() para key=%d\n", p->key);
+            r.status = get_value(p->key, r.value1, &r.N_value2, r.V_value2, &r.value3);
+            break;
+        case 3:
+            // printf("Ejecutando modify_value() para key=%d\n", p->key);
+            r.status = modify_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
             break;
         case 4:
-            sscanf(ptr, "%d", &key);
-            status = delete_key(key);
+            // printf("Ejecutando delete() para key=%d\n", p->key);
+            r.status = delete_key(p->key);
             break;
         case 5:
-            sscanf(ptr, "%d", &key);
-            status = exist(key);
+            // printf("Ejecutando exist() para key=%d\n", p->key);
+            r.status = exist(p->key);
             break;
         default:
-            status = -1;
+            // printf("Operación no reconocida: %d\n", p->op);
+            r.status = -1;
     }
 
-    snprintf(respuesta, MAX_BUFFER, "%d", status);
-    writeLine(sd, respuesta);
+
+    sendMessage(sd, (char *)&r, sizeof(r)+1);
     close(sd);
     return NULL;
 }

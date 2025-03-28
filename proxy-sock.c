@@ -9,61 +9,92 @@
 
 #define MAX_BUFFER 2048
 
-// Lee del socket hasta encontrar el caracter nulo ('\0') y lo guarda en buffer
-int readLine(int sd, char *buffer, size_t max) {
-    size_t pos = 0;
-    char c;
-    while (pos < max - 1) {
-        if (read(sd, &c, 1) <= 0) return -1;  // Error o conexión cerrada
-        if (c == '\0') break;               // Fin de la cadena
-        buffer[pos++] = c;
-    }
-    buffer[pos] = '\0';  // Asegura terminación nula
-    return 0;
+int sendMessage(int socket, char * buffer, int len)
+{
+	int r;
+	int l = len;
+		
+
+	do {	
+		r = write(socket, buffer, l);
+		l = l -r;
+		buffer = buffer + r;
+	} while ((l>0) && (r>=0));
+	
+	if (r < 0)
+		return (-1);   /* fail */
+	else
+		return(0);	/* full length has been sent */
 }
 
-// Envía por el socket una cadena terminada en nulo ('\0')
-int writeLine(int sd, const char *str) {
-    size_t len = strlen(str) + 1;
-    return write(sd, str, len) == len ? 0 : -1;
+int recvMessage(int socket, char *buffer, int len)
+{
+	int r;
+	int l = len;
+		
+
+	do {	
+		r = read(socket, buffer, l);
+		l = l -r ;
+		buffer = buffer + r;
+	} while ((l>0) && (r>=0));
+	
+	if (r < 0)
+		return (-1);   /* fallo */
+	else
+		return(0);	/* full length has been receive */
 }
+
+
 
 // Función principal de envío/recepción con el servidor a través del socket TCP
 int send_recv_text(const char *mensaje, char *respuesta) {
-    char *ip = getenv("IP_TUPLAS");
-    char *port_str = getenv("PORT_TUPLAS");
-    if (!ip || !port_str) {
-        fprintf(stderr, "Variables de entorno IP_TUPLAS o PORT_TUPLAS no definidas\n");
-        return -2;
-    }
-
-    int puerto = atoi(port_str);
+    
+    char *maquina; short puerto;
     struct sockaddr_in server_addr;
     struct hostent *hp;
-    int sd;
+    int sd, ret;
 
-    // Obtener información del host
-    hp = gethostbyname(ip);
-    if (!hp) return -2;
+    maquina = getenv("IP_TUPLAS");
+    puerto = (short)atoi(getenv("PORT_TUPLAS"));
 
-    // Crear el socket TCP
+    hp = gethostbyname(maquina);
+    if (NULL == hp) {
+        printf("ERROR en gethostbyname con '%s'\n", maquina) ;
+        return -1 ;
+    }
+
+    // (1) creación del socket (NO tiene dirección asignada aquí)
     sd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sd < 0) return -2;
+    if (sd < 0) {
+        perror("ERROR en socket: ") ;
+        return -1 ;
+    }
 
-    // Inicializar dirección del servidor
-    memset(&server_addr, 0, sizeof(server_addr));
-    memcpy(&(server_addr.sin_addr), hp->h_addr, hp->h_length);
+    // (2) obtener la dirección
+    bzero((char *)&server_addr, sizeof(server_addr));
+    memcpy (&(server_addr.sin_addr), hp->h_addr, hp->h_length);
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(puerto);
 
-    // Conectar con el servidor
-    if (connect(sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    // (3) Solicitud de conexión (con socket remoto)
+    // * si el socket local no tiene dirección asignada
+    //   entonces se le asigna una automáticamente con puerto temporal
+    ret = connect(sd, (struct sockaddr *) &server_addr, sizeof(server_addr)) ;
+    if (ret < 0) {
+        perror("ERROR en connect: ");
+        return -1;
+    }
+
+    char buffer[MAX_BUFFER];
+
+    // Enviar petición y recibir respuesta
+    if (sendMessage(sd, buffer, sizeof(buffer)+1)) {
         close(sd);
         return -2;
     }
 
-    // Enviar petición y recibir respuesta
-    if (writeLine(sd, mensaje) < 0 || readLine(sd, respuesta, MAX_BUFFER) < 0) {
+    if (recvMessage(sd, buffer, sizeof(struct respuesta))) { // La structura respuesta ocupa 528 bytes 
         close(sd);
         return -2;
     }
