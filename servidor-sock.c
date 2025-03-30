@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 #include <sys/socket.h>
 
 #define MAX_BUFFER 2048
@@ -46,6 +47,51 @@ int recvMessage(int socket, char *buffer, int len)
 		return(0);	/* full length has been receive */
 }
 
+ssize_t readLine(int socket, void *buffer, size_t n)
+{
+    ssize_t numRead;  /* num of bytes fetched by last read() */
+    size_t totRead;	  /* total bytes read so far */
+    char *buf;
+    char ch;
+
+
+    if (n <= 0 || buffer == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    buf = buffer;
+    totRead = 0;
+
+    for (;;) {
+        numRead = read(socket, &ch, 1);	/* read a byte */
+
+        if (numRead == -1) {
+            if (errno == EINTR)	/* interrupted -> restart read() */
+                continue;
+            else
+                return -1;		/* some other error */
+        } else if (numRead == 0) {	/* EOF */
+            if (totRead == 0)	/* no byres read; return 0 */
+                return 0;
+            else
+                break;
+        } else {			/* numRead must be 1 if we get here*/
+            if (ch == '\n')
+                break;
+            if (ch == '\0')
+                break;
+            if (totRead < n - 1) {		/* discard > (n-1) bytes */
+                totRead++;
+                *buf++ = ch;
+            }
+        }
+    }
+
+    *buf = '\0';
+    return totRead;
+}
+
 
 // Función ejecutada por cada hilo que atiende a un cliente
 void *tratar_cliente(void *arg) {
@@ -53,7 +99,7 @@ void *tratar_cliente(void *arg) {
     free(arg);
     char buffer[MAX_BUFFER];
 
-    if (recvMessage(sd, buffer, sizeof(struct peticion)) < 0) {
+    if (readLine(sd, buffer, sizeof(struct peticion)) == 0) {
         close(sd);
         return NULL;
     }
@@ -93,7 +139,7 @@ void *tratar_cliente(void *arg) {
     }
 
 
-    sendMessage(sd, (char *)&r, sizeof(r));
+    sendMessage(sd, (char *)&r, (size_t)sizeof(r));
     close(sd);
     return NULL;
 }

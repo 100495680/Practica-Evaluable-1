@@ -1,6 +1,7 @@
 #include "claves.h"
 #include <mqueue.h>
 #include <unistd.h>
+#include <errno.h>
 #include <string.h>
 #include "claves.h"
 #include <stdio.h>
@@ -53,6 +54,51 @@ int recvMessage(int socket, char *buffer, int len)
 		return(0);	/* full length has been receive */
 }
 
+ssize_t readLine(int fd, void *buffer, size_t n)
+{
+    ssize_t numRead;  /* num of bytes fetched by last read() */
+    size_t totRead;	  /* total bytes read so far */
+    char *buf;
+    char ch;
+
+
+    if (n <= 0 || buffer == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    buf = buffer;
+    totRead = 0;
+
+    for (;;) {
+        numRead = read(fd, &ch, 1);	/* read a byte */
+
+        if (numRead == -1) {
+            if (errno == EINTR)	/* interrupted -> restart read() */
+                continue;
+            else
+                return -1;		/* some other error */
+        } else if (numRead == 0) {	/* EOF */
+            if (totRead == 0)	/* no byres read; return 0 */
+                return 0;
+            else
+                break;
+        } else {			/* numRead must be 1 if we get here*/
+            if (ch == '\n')
+                break;
+            if (ch == '\0')
+                break;
+            if (totRead < n - 1) {		/* discard > (n-1) bytes */
+                totRead++;
+                *buf++ = ch;
+            }
+        }
+    }
+
+    *buf = '\0';
+    return totRead;
+}
+
 int send_recv(struct peticion *p, struct respuesta *r) {
     printf("Dentro del send recieve");
     char *maquina; short puerto;
@@ -100,7 +146,7 @@ int send_recv(struct peticion *p, struct respuesta *r) {
         return -2;
     }
         // Aquí creo que tiene que ir al buffer
-    if (recvMessage(sd, buffer, sizeof(struct respuesta))) { // La structura respuesta ocupa 528 bytes
+    if (readLine(sd, buffer, (size_t)sizeof(struct respuesta)) == 0) { // La structura respuesta ocupa 528 bytes
         close(sd);
         return -2;
     }
