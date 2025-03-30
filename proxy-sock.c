@@ -138,7 +138,7 @@ int send_recv(struct peticion *p, struct respuesta *r) {
     }
 
     char buffer[MAX_BUFFER];
-    memcpy(buffer, &p, sizeof(p));
+    memcpy(buffer, p, sizeof(struct peticion));
 
     // Enviar petición y recibir respuesta
     if (sendMessage(sd, buffer, sizeof(struct peticion))) {
@@ -146,13 +146,14 @@ int send_recv(struct peticion *p, struct respuesta *r) {
         return -2;
     }
         // Aquí creo que tiene que ir al buffer
-    if (readLine(sd, buffer, (size_t)sizeof(struct respuesta)) == 0) { // La structura respuesta ocupa 528 bytes
+    if (recvMessage(sd, buffer, (size_t)sizeof(struct respuesta)) < 0) { // La structura respuesta ocupa 528 bytes
         close(sd);
         return -2;
     }
     r = (struct respuesta *)buffer;
 
     close(sd);  // Cerrar socket
+    printf("Fuera");
     return r->status;
 }
 

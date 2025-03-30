@@ -67,7 +67,7 @@ ssize_t readLine(int socket, void *buffer, size_t n)
         numRead = read(socket, &ch, 1);	/* read a byte */
 
         if (numRead == -1) {
-            if (errno == EINTR)	/* interrupted -> restart read() */
+            if (errno == EINTR)	/* interrupted . restart read() */
                 continue;
             else
                 return -1;		/* some other error */
@@ -99,42 +99,43 @@ void *tratar_cliente(void *arg) {
     free(arg);
     char buffer[MAX_BUFFER];
 
-    if (readLine(sd, buffer, sizeof(struct peticion)) == 0) {
+    if (recvMessage(sd, buffer, sizeof(struct peticion)) < 0) {
         close(sd);
         return NULL;
     }
 
-    struct peticion *p = (struct peticion *)buffer;
+    struct peticion p;
+    memcpy(&p, buffer, sizeof(struct peticion));
     struct respuesta r;
-    // printf("Procesando operación: %d para la clave: %d\n", p->op, p->key);
+    // printf("Procesando operación: %d para la clave: %d\n", p.op, p.key);
 
-    switch (p->op) {
+    switch (p.op) {
         case 0:
             // printf("Ejecutando destroy()\n");
             r.status = destroy();
             break;
         case 1:
-            // printf("Ejecutando set_value() para key=%d\n", p->key);
-            r.status = set_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
+            // printf("Ejecutando set_value() para key=%d\n", p.key);
+            r.status = set_value(p.key, p.value1, p.N_value2, p.V_value2, p.value3);
             break;
         case 2:
-            // printf("Ejecutando get_value() para key=%d\n", p->key);
-            r.status = get_value(p->key, r.value1, &r.N_value2, r.V_value2, &r.value3);
+            // printf("Ejecutando get_value() para key=%d\n", p.key);
+            r.status = get_value(p.key, r.value1, &r.N_value2, r.V_value2, &r.value3);
             break;
         case 3:
-            // printf("Ejecutando modify_value() para key=%d\n", p->key);
-            r.status = modify_value(p->key, p->value1, p->N_value2, p->V_value2, p->value3);
+            // printf("Ejecutando modify_value() para key=%d\n", p.key);
+            r.status = modify_value(p.key, p.value1, p.N_value2, p.V_value2, p.value3);
             break;
         case 4:
-            // printf("Ejecutando delete() para key=%d\n", p->key);
-            r.status = delete_key(p->key);
+            // printf("Ejecutando delete() para key=%d\n", p.key);
+            r.status = delete_key(p.key);
             break;
         case 5:
-            // printf("Ejecutando exist() para key=%d\n", p->key);
-            r.status = exist(p->key);
+            // printf("Ejecutando exist() para key=%d\n", p.key);
+            r.status = exist(p.key);
             break;
         default:
-            // printf("Operación no reconocida: %d\n", p->op);
+            // printf("Operación no reconocida: %d\n", p.op);
             r.status = -1;
     }
 
