@@ -12,6 +12,7 @@ CLIENTE4 = app-cliente4
 CLIENTE5 = app-cliente5
 
 SERVIDOR = servidor-sock
+PROXY = proxy-sock
 
 # Objetos
 PROXY_OBJ = proxy-sock.o
@@ -48,6 +49,11 @@ $(CLIENTE5): app-cliente5.c $(LIBNAME)
 $(SERVIDOR): servidor-sock.c claves.o
 	$(CC) $(CFLAGS) -o $@ servidor-sock.c claves.o
 
+
+# Servidor con claves.c real
+$(PROXY): proxy-sock.c claves.h
+	$(CC) $(CFLAGS) -fPIC -c proxy-sock.c
+
 # Compilar objetos
 proxy-sock.o: proxy-sock.c claves.h
 	$(CC) $(CFLAGS) -fPIC -c proxy-sock.c
@@ -56,4 +62,4 @@ claves.o: claves.c claves.h
 	$(CC) $(CFLAGS) -fPIC -c claves.c
 
 clean:
-	rm -f *.o *.so $(CLIENTE) $(SERVIDOR)
+	rm -f *.o *.so $(CLIENTE) $(CLIENTE1) $(CLIENTE2) $(CLIENTE3) $(CLIENTE4) $(CLIENTE5) $(SERVIDOR)

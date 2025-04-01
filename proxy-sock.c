@@ -17,6 +17,7 @@
 
 #define MAX_BUFFER 2048
 
+// Funciones tipo de mandado y recepción de mensajes
 
 int sendMessage(int socket, char * buffer, int len)
 {
@@ -35,7 +36,6 @@ int sendMessage(int socket, char * buffer, int len)
 	else
 		return(0);	/* full length has been sent */
 }
-
 int recvMessage(int socket, char *buffer, int len)
 {
 	int r;
@@ -54,53 +54,35 @@ int recvMessage(int socket, char *buffer, int len)
 		return(0);	/* full length has been receive */
 }
 
-ssize_t readLine(int fd, void *buffer, size_t n)
-{
-    ssize_t numRead;  /* num of bytes fetched by last read() */
-    size_t totRead;	  /* total bytes read so far */
-    char *buf;
-    char ch;
 
+// Estas funciones sirven para compatibilidad con equipos diferentes su función es pasar los mensajes
+// De una forma que cualquiera con el servidor lo pueda leer dando igual sea un ordenador de 32 o 64 bits
 
-    if (n <= 0 || buffer == NULL) {
-        errno = EINVAL;
-        return -1;
+void meter_peticion_buffer(char *buffer, struct peticion *p) {
+    sprintf(buffer, "%d %d %s %d", p->op, p->key, p->value1, p->N_value2);   // Sacamos el código del buffer y lo metemos en la estructura directamente
+    int offset = strlen(buffer);
+    // Necesitamos un código especial para V_value2 ya que no tiene un tamaño constante
+    for (int i = 0; i < p->N_value2; i++) {
+        offset += sprintf(buffer + offset, " %lf", p->V_value2[i]); // El valor en bytes de un double siempre es constante
     }
-
-    buf = buffer;
-    totRead = 0;
-
-    for (;;) {
-        numRead = read(fd, &ch, 1);	/* read a byte */
-
-        if (numRead == -1) {
-            if (errno == EINTR)	/* interrupted -> restart read() */
-                continue;
-            else
-                return -1;		/* some other error */
-        } else if (numRead == 0) {	/* EOF */
-            if (totRead == 0)	/* no byres read; return 0 */
-                return 0;
-            else
-                break;
-        } else {			/* numRead must be 1 if we get here*/
-            if (ch == '\n')
-                break;
-            if (ch == '\0')
-                break;
-            if (totRead < n - 1) {		/* discard > (n-1) bytes */
-                totRead++;
-                *buf++ = ch;
-            }
-        }
-    }
-
-    *buf = '\0';
-    return totRead;
+    sprintf(buffer + offset, " %d %d %s", p->value3.x, p->value3.y, p->q_name);
 }
 
+void sacar_respuesta_buffer(char *buffer, struct respuesta *r) {
+    sscanf(buffer, "%d %s %d", &r->status, r->value1, &r->N_value2);
+    char *ptr = buffer;
+    // Necesitamos un código especial para V_value2 ya que no tiene un tamaño constante
+    for (int i = 0; i < r->N_value2; i++) {
+        ptr = strchr(ptr, ' ') + 1;
+        sscanf(ptr, "%lf", &r->V_value2[i]); // El valor en bytes de un double siempre es constante
+    }
+    ptr = strchr(ptr, ' ') + 1;
+    sscanf(ptr, "%d %d", &r->value3.x, &r->value3.y);
+}
+
+// Función comun al todas las operaciones que contiene la lógica del mandado y recepción de mensajes
+
 int send_recv(struct peticion *p, struct respuesta *r) {
-    printf("Dentro del send recieve");
     char *maquina; short puerto;
     struct sockaddr_in server_addr;
     struct hostent *hp;
@@ -137,23 +119,20 @@ int send_recv(struct peticion *p, struct respuesta *r) {
         return -1;
     }
 
-    printf("Antes de conectar");
     char buffer[MAX_BUFFER];
-    memcpy(buffer, p, sizeof(struct peticion)+1);
-    buffer[sizeof(struct peticion)] = '\0';
+    meter_peticion_buffer(buffer, p);
 
     // Enviar petición y recibir respuesta
     if (sendMessage(sd, buffer, sizeof(struct peticion))) {
         close(sd);
         return -2;
     }
-
         // Aquí creo que tiene que ir al buffer
-    if (readLine(sd, buffer, (size_t)sizeof(struct respuesta)) == 0) { // La structura respuesta ocupa 528 bytes
+    if (recvMessage(sd, buffer, (size_t)sizeof(struct respuesta)) < 0) { // La structura respuesta ocupa 528 bytes
         close(sd);
         return -2;
     }
-    r = (struct respuesta *)buffer;
+    sacar_respuesta_buffer(buffer, r);
 
     close(sd);  // Cerrar socket
     return r->status;
@@ -195,7 +174,6 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     p.value3 = value3;
 
     struct respuesta r;
-    printf("Set Value ejecutado");
     return send_recv(&p, &r);
 }
 
