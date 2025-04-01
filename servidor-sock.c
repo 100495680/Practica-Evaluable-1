@@ -86,6 +86,7 @@ ssize_t readLine(int socket, void *buffer, size_t n)
                 *buf++ = ch;
             }
         }
+        //printf("%ld",totRead);
     }
 
     *buf = '\0';
@@ -95,20 +96,23 @@ ssize_t readLine(int socket, void *buffer, size_t n)
 
 // Función ejecutada por cada hilo que atiende a un cliente
 void *tratar_cliente(void *arg) {
+    printf("in");
     int sd = *(int *)arg;
     free(arg);
     char buffer[MAX_BUFFER];
 
-    if (recvMessage(sd, buffer, sizeof(struct peticion)) < 0) {
+    if (readLine(sd, buffer, (size_t)sizeof(struct peticion)) < 0) {
         close(sd);
         return NULL;
     }
-
     struct peticion p;
     memcpy(&p, buffer, sizeof(struct peticion));
     struct respuesta r;
     // printf("Procesando operación: %d para la clave: %d\n", p.op, p.key);
+    
 
+    printf("key: %d", p.key);
+    
     switch (p.op) {
         case 0:
             // printf("Ejecutando destroy()\n");
@@ -139,8 +143,10 @@ void *tratar_cliente(void *arg) {
             r.status = -1;
     }
 
-
-    sendMessage(sd, (char *)&r, (size_t)sizeof(r));
+    char * response = (char *)&r;
+    memcpy(buffer, response, sizeof(struct respuesta));
+    buffer[sizeof(struct respuesta)] = '\0';
+    sendMessage(sd,buffer, (size_t)sizeof(struct respuesta) + 1);
     close(sd);
     return NULL;
 }
@@ -181,6 +187,7 @@ int main(int argc, char *argv[]) {
 
 
     while (1) {
+        printf("ex");
         client_sd = malloc(sizeof(int));
         *client_sd = accept(server_sd, (struct sockaddr *)&client_addr, &client_len);
         if (*client_sd < 0) {
@@ -188,9 +195,12 @@ int main(int argc, char *argv[]) {
             free(client_sd);
             continue;
         }
+        tratar_cliente(client_sd);
+        /*
         pthread_t hilo;
         pthread_create(&hilo, NULL, tratar_cliente, client_sd);
         pthread_detach(hilo);  // Liberar recursos automáticamente
+        */
     }
 
     close(server_sd);
