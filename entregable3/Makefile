@@ -4,7 +4,7 @@ CFLAGS = -Wall -g -pthread -fPIC -I/usr/include/tirpc
 LDLIBS = -ltirpc
 LIBNAME = libclaves.so
 
-CLIENTES = app-cliente app-cliente1 app-cliente2 app-cliente3 app-cliente4 app-cliente5
+CLIENTES = app-cliente-1 app-cliente-2 app-cliente-3 app-cliente-4 app-cliente-5
 SERVIDOR = servidor
 
 PROXY_OBJ = proxy-rpc.o claves_rpc_clnt.o claves_rpc_xdr.o

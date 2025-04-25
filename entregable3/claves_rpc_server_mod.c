@@ -11,19 +11,6 @@ bool_t remote_set_value_1_svc(arg_set_value *arg, int *result, struct svc_req *r
     return TRUE;
 }
 
-/*bool_t remote_get_value_1_svc(int *arg, ret_get_value *result, struct svc_req *rqstp) {
-    // Usamos buffers estáticos en lugar de malloc para evitar conflictos de liberación automática
-    static char buffer1[MAX_STRING];
-    static double buffer2[MAX_VECTOR];
-
-    result->value1 = buffer1;
-    result->V_value2.V_value2_val = buffer2;
-
-    result->status = get_value(*arg, result->value1, &result->N_value2, buffer2, &result->value3);
-    result->V_value2.V_value2_len = result->N_value2;
-
-    return TRUE;
-}*/
 bool_t remote_get_value_1_svc(int *arg, ret_get_value *result, struct svc_req *rqstp) {
     char *value1 = malloc(MAX_STRING * sizeof(char));
     double *value2 = malloc(MAX_VECTOR * sizeof(double));

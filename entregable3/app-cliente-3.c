@@ -9,7 +9,7 @@ int main() {
     int response;
 
 
-    for (int i=0; i < 1000; i++) {
+    for (int i=0; i < 10000; i++) {
     // Prueba de set value con 30 mil claves, se puede probar la concurrencia corriendo otros procesos mientras este está en ejecución.
     printf("Insertando clave...\n");
     response = set_value(key, v1, 3, v2, v3);
